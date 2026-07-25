@@ -1,0 +1,46 @@
+.estante-publica-page {
+    max-width: 600px;
+    margin: 40px auto;
+    padding: 0 16px;
+  }
+  
+  .busca-input {
+    width: 100%;
+    padding: 10px;
+    margin-bottom: 20px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    box-sizing: border-box;
+  }
+  
+  .vazio {
+    color: #888;
+    text-align: center;
+    margin-top: 20px;
+  }
+  
+  .livro-card {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 12px;
+    border: 1px solid #333;
+    border-radius: 8px;
+    margin-bottom: 10px;
+    text-align: left;
+  }
+  
+  .livro-card img {
+    width: 60px;
+    height: 90px;
+    object-fit: cover;
+    flex-shrink: 0;
+  }
+  
+  .livro-card h3 {
+    margin: 0 0 4px 0;
+  }
+  
+  .livro-card p {
+    margin: 0 0 8px 0;
+  }
