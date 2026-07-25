@@ -23,13 +23,13 @@ export function MinhaEstante() {
   async function carregarLivros() {
     const { data: userData } = await supabase.auth.getUser()
     const userId = userData.user?.id
-  
+
     const { data, error } = await supabase
       .from('books')
       .select('*')
       .eq('user_id', userId)
       .order('created_at', { ascending: false })
-  
+
     if (error) {
       setErro('Erro ao carregar livros.')
     } else {
@@ -90,12 +90,12 @@ export function MinhaEstante() {
   }
 
   <div className="estante-header">
-  <h1>Minha Estante</h1>
-  <div style={{ display: 'flex', gap: '8px' }}>
-    <Link to="/estante-publica">Ver estante pública</Link>
-    <button onClick={handleLogout}>Sair</button>
+    <h1>Minha Estante</h1>
+    <div style={{ display: 'flex', gap: '8px' }}>
+      <Link to="/estante-publica">Ver estante pública</Link>
+      <button onClick={handleLogout}>Sair</button>
+    </div>
   </div>
-</div>
 
   return (
     <div className="estante-page">
@@ -120,7 +120,7 @@ export function MinhaEstante() {
 
       <div className="lista-livros">
         {livros.map((livro) => (
-          <div key={livro.id} className="livro-card">
+          <div key={livro.id} className="livro-card" data-testid={`livro-${livro.isbn}`}>
             {livro.cover_url && <img src={livro.cover_url} alt={livro.title} />}
             <div>
               <h3>{livro.title}</h3>
@@ -133,3 +133,4 @@ export function MinhaEstante() {
     </div>
   )
 }
+  
