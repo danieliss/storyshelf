@@ -1,10 +1,9 @@
 import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import { supabase } from '../services/supabaseClient'
 import { buscarLivroPorIsbn } from '../services/isbnApi'
 import type { Book } from '../types/book'
 import { useAuth } from '../hooks/useAuth'
-import { Link } from 'react-router-dom'
 import './MinhaEstante.css'
 
 export function MinhaEstante() {
@@ -63,6 +62,7 @@ export function MinhaEstante() {
       isbn,
       title: resultado.title,
       author: resultado.author,
+      publisher: resultado.publisher,
       cover_url: resultado.cover_url,
     })
 
@@ -89,19 +89,14 @@ export function MinhaEstante() {
     navigate('/login')
   }
 
-  <div className="estante-header">
-    <h1>Minha Estante</h1>
-    <div style={{ display: 'flex', gap: '8px' }}>
-      <Link to="/estante-publica">Ver estante pública</Link>
-      <button onClick={handleLogout}>Sair</button>
-    </div>
-  </div>
-
   return (
     <div className="estante-page">
       <div className="estante-header">
         <h1>Minha Estante</h1>
-        <button onClick={handleLogout}>Sair</button>
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+          <Link to="/estante-publica">Ver estante pública</Link>
+          <button onClick={handleLogout}>Sair</button>
+        </div>
       </div>
 
       <div className="adicionar-livro">
@@ -125,6 +120,7 @@ export function MinhaEstante() {
             <div>
               <h3>{livro.title}</h3>
               <p>{livro.author}</p>
+              <p className="editora">{livro.publisher}</p>
               <button onClick={() => handleRemoverLivro(livro.id)}>Remover</button>
             </div>
           </div>
@@ -133,4 +129,3 @@ export function MinhaEstante() {
     </div>
   )
 }
-  

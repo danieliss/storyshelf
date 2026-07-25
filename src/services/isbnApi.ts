@@ -13,6 +13,7 @@ export async function buscarLivroPorIsbn(isbnDigitado: string) {
   return {
     title: livro.title ?? 'Título não encontrado',
     author: livro.authors?.[0] ?? 'Autor desconhecido',
+    publisher: livro.publisher ?? 'Editora desconhecida',
     cover_url: livro.cover_url ?? '',
   }
 }

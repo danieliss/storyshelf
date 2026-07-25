@@ -29,7 +29,8 @@ export function EstantePublica() {
     const termo = busca.toLowerCase()
     return (
       livro.title.toLowerCase().includes(termo) ||
-      livro.author.toLowerCase().includes(termo)
+      livro.author.toLowerCase().includes(termo) ||
+      livro.publisher?.toLowerCase().includes(termo)
     )
   })
 
@@ -39,7 +40,7 @@ export function EstantePublica() {
 
       <input
         type="text"
-        placeholder="Buscar por título ou autor..."
+        placeholder="Buscar por título, autor ou editora..."
         value={busca}
         onChange={(e) => setBusca(e.target.value)}
         className="busca-input"
@@ -58,6 +59,7 @@ export function EstantePublica() {
             <div>
               <h3>{livro.title}</h3>
               <p>{livro.author}</p>
+              <p className="editora">{livro.publisher}</p>
             </div>
           </div>
         ))}
