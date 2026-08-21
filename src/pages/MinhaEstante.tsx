@@ -4,10 +4,12 @@ import { buscarLivroPorIsbn, buscarLivrosPorTexto } from '../services/isbnApi'
 import type { ResultadoBusca } from '../services/isbnApi'
 import { uploadCapaPersonalizada } from '../services/coverUpload'
 import { buscarOrigemAutor } from '../services/authorOrigin'
+import { bandeiraDoCodigoPais } from '../utils/flag'
 import type { Book } from '../types/book'
 import { BookCover } from '../components/BookCover'
 import { AppHeader } from '../components/AppHeader'
 import { BarcodeScanner } from '../components/BarcodeScanner'
+import { LibraryStats } from '../components/LibraryStats'
 import './MinhaEstante.css'
 
 export function MinhaEstante() {
@@ -18,6 +20,7 @@ export function MinhaEstante() {
   const [termoBusca, setTermoBusca] = useState('')
   const [resultadosBusca, setResultadosBusca] = useState<ResultadoBusca[]>([])
   const [mostrarScanner, setMostrarScanner] = useState(false)
+  const [mostrarEstatisticas, setMostrarEstatisticas] = useState(false)
   const [carregando, setCarregando] = useState(false)
   const [erro, setErro] = useState('')
 
@@ -48,6 +51,7 @@ export function MinhaEstante() {
     author: string
     publisher: string
     cover_url: string
+    genre: string | null
   }) {
     const { data: userData } = await supabase.auth.getUser()
     const userId = userData.user?.id
@@ -62,7 +66,9 @@ export function MinhaEstante() {
     const { error } = await supabase.from('books').insert({
       user_id: userId,
       ...dados,
-      author_origin: origemAutor ?? 'Origem desconhecida',
+      genre: dados.genre ?? 'Não classificado',
+      author_origin: origemAutor.pais ?? 'Origem desconhecida',
+      author_origin_code: origemAutor.codigoPais,
     })
 
     if (error) {
@@ -160,6 +166,17 @@ export function MinhaEstante() {
       <div className="estante-page">
         <h1>Minha Estante</h1>
 
+        <button
+          className="botao-estatisticas"
+          onClick={() => setMostrarEstatisticas(!mostrarEstatisticas)}
+        >
+          {mostrarEstatisticas ? 'Ocultar estatísticas' : '📊 Ver estatísticas da minha biblioteca'}
+        </button>
+
+        {mostrarEstatisticas && (
+          <LibraryStats livros={livros} titulo="Minha biblioteca pessoal" />
+        )}
+
         <div className="modo-busca">
           <button
             className={modoBusca === 'isbn' ? 'ativo' : ''}
@@ -239,7 +256,14 @@ export function MinhaEstante() {
                 <h3>{livro.title}</h3>
                 <p>{livro.author}</p>
                 <p className="editora">{livro.publisher}</p>
-                <p className="origem">{livro.author_origin}</p>
+                <p className="origem">
+                  {livro.author_origin_code && (
+                    <span className="bandeira-inline">
+                      {bandeiraDoCodigoPais(livro.author_origin_code)}
+                    </span>
+                  )}
+                  {livro.author_origin}
+                </p>
                 <button onClick={() => handleRemoverLivro(livro.id)}>Remover</button>
               </div>
             </div>

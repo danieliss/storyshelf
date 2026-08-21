@@ -1,4 +1,3 @@
-// src/types/book.ts
 export type Book = {
   id: string
   user_id: string
@@ -6,6 +5,8 @@ export type Book = {
   title: string
   author: string
   author_origin: string
+  author_origin_code: string | null
+  genre: string
   publisher: string
   cover_url: string
   created_at: string

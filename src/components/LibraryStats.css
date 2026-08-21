@@ -1,0 +1,64 @@
+.stats-container {
+    background: var(--color-surface);
+    border-radius: var(--radius);
+    padding: 20px;
+    margin-bottom: 24px;
+    box-shadow: var(--shadow);
+  }
+  
+  .stats-total {
+    color: var(--color-text-muted);
+    margin-bottom: 16px;
+  }
+  
+  .stats-secao {
+    margin-bottom: 20px;
+  }
+  
+  .stats-secao h3 {
+    font-size: 15px;
+    margin-bottom: 10px;
+  }
+  
+  .stats-linha {
+    display: grid;
+    grid-template-columns: 140px 1fr 30px;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+    font-size: 13px;
+  }
+  
+  .stats-label {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  
+  .stats-bandeira {
+    font-size: 16px;
+  }
+  
+  .stats-barra-fundo {
+    background: var(--color-background);
+    border-radius: 4px;
+    height: 10px;
+    overflow: hidden;
+  }
+  
+  .stats-barra {
+    background: var(--color-primary);
+    height: 100%;
+  }
+  
+  .stats-quantidade {
+    text-align: right;
+    color: var(--color-text-muted);
+  }
+  
+  .stats-vazio {
+    color: var(--color-text-muted);
+  }

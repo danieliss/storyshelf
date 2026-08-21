@@ -1,5 +1,3 @@
-// src/services/isbnApi.ts
-
 export async function buscarLivroPorIsbn(isbnDigitado: string) {
   const isbn = isbnDigitado.replace(/\D/g, '')
 
@@ -24,6 +22,7 @@ async function buscarPorBrasilApi(isbn: string) {
     author: livro.authors?.[0] ?? 'Autor desconhecido',
     publisher: livro.publisher ?? 'Editora desconhecida',
     cover_url: capa,
+    genre: null as string | null,
   }
 }
 
@@ -45,6 +44,7 @@ async function buscarPorGoogleBooksIsbn(isbn: string) {
     author: info.authors?.[0] ?? 'Autor desconhecido',
     publisher: info.publisher ?? 'Editora desconhecida',
     cover_url: info.imageLinks?.thumbnail ?? `https://covers.openlibrary.org/b/isbn/${isbn}-M.jpg`,
+    genre: info.categories?.[0] ?? null,
   }
 }
 
@@ -63,6 +63,7 @@ async function buscarPorOpenLibrary(isbn: string) {
     author: livro.authors?.[0]?.name ?? 'Autor desconhecido',
     publisher: livro.publishers?.[0]?.name ?? 'Editora desconhecida',
     cover_url: livro.cover?.medium ?? `https://covers.openlibrary.org/b/isbn/${isbn}-M.jpg`,
+    genre: livro.subjects?.[0]?.name ?? null,
   }
 }
 
@@ -72,6 +73,7 @@ export type ResultadoBusca = {
   author: string
   publisher: string
   cover_url: string
+  genre: string | null
 }
 
 export async function buscarLivrosPorTexto(termo: string): Promise<ResultadoBusca[]> {
@@ -100,6 +102,7 @@ export async function buscarLivrosPorTexto(termo: string): Promise<ResultadoBusc
         author: info.authors?.[0] ?? 'Autor desconhecido',
         publisher: info.publisher ?? 'Editora desconhecida',
         cover_url: info.imageLinks?.thumbnail ?? '',
+        genre: info.categories?.[0] ?? null,
       }
     })
     .filter((livro: ResultadoBusca) => livro.isbn !== '')

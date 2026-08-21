@@ -1,41 +1,89 @@
-// src/services/authorOrigin.ts
-
-async function buscarNomePaisEmPt(nomeAutor: string): Promise<string | null> {
-  const nomeSeguro = nomeAutor.replace(/"/g, '')
-
-  const sparql = `
-    SELECT ?paisLabel WHERE {
-      SERVICE wikibase:mwapi {
-        bd:serviceParam wikibase:api "EntitySearch".
-        bd:serviceParam wikibase:endpoint "www.wikidata.org".
-        bd:serviceParam mwapi:search "${nomeSeguro}".
-        bd:serviceParam mwapi:language "en".
-        bd:serviceParam mwapi:limit "10".
-        ?item wikibase:apiOutputItem mwapi:item.
-      }
-      ?item wdt:P31 wd:Q5.
-      ?item wdt:P27 ?pais.
-      SERVICE wikibase:label { bd:serviceParam wikibase:language "pt,en". }
-    }
-    LIMIT 1
-  `
-
-  const url = `https://query.wikidata.org/sparql?query=${encodeURIComponent(sparql)}&format=json`
-
-  try {
-    const response = await fetch(url, {
-      headers: { Accept: 'application/sparql-results+json' },
-    })
-
-    if (!response.ok) return null
-
-    const data = await response.json()
-    return data.results?.bindings?.[0]?.paisLabel?.value ?? null
-  } catch {
-    return null
-  }
+type OrigemAutor = {
+  pais: string | null
+  codigoPais: string | null
 }
 
-export async function buscarOrigemAutor(nomeAutor: string): Promise<string | null> {
-  return await buscarNomePaisEmPt(nomeAutor)
+async function buscarQidViaWikipedia(nomeAutor: string, idioma: string): Promise<string | null> {
+  const url = `https://${idioma}.wikipedia.org/w/api.php?action=query&generator=search&gsrsearch=${encodeURIComponent(nomeAutor)}&gsrlimit=1&prop=pageprops&format=json&origin=*`
+
+  const response = await fetch(url)
+  if (!response.ok) return null
+
+  const data = await response.json()
+  const pages = data.query?.pages
+  if (!pages) return null
+
+  const primeiraPagina = Object.values(pages)[0] as any
+  return primeiraPagina?.pageprops?.wikibase_item ?? null
+}
+
+async function buscarQidViaWikidataSearch(nomeAutor: string, idioma: string): Promise<string | null> {
+  const url = `https://www.wikidata.org/w/api.php?action=wbsearchentities&search=${encodeURIComponent(nomeAutor)}&language=${idioma}&format=json&origin=*&type=item&limit=1`
+
+  const response = await fetch(url)
+  if (!response.ok) return null
+
+  const data = await response.json()
+  return data.search?.[0]?.id ?? null
+}
+
+async function buscarDadosPais(qid: string): Promise<OrigemAutor | null> {
+  const url = `https://www.wikidata.org/w/api.php?action=wbgetentities&ids=${qid}&props=claims&format=json&origin=*`
+
+  const response = await fetch(url)
+  if (!response.ok) return null
+
+  const data = await response.json()
+  const claims = data.entities?.[qid]?.claims
+
+  const ehHumano = (claims?.P31 ?? []).some(
+    (c: any) => c.mainsnak?.datavalue?.value?.id === 'Q5'
+  )
+  if (!ehHumano) return null
+
+  const paisId = claims?.P27?.[0]?.mainsnak?.datavalue?.value?.id
+  if (!paisId) return null
+
+  const nomeUrl = `https://www.wikidata.org/w/api.php?action=wbgetentities&ids=${paisId}&props=labels|claims&languages=pt&format=json&origin=*`
+  const nomeResponse = await fetch(nomeUrl)
+  if (!nomeResponse.ok) return null
+
+  const nomeData = await nomeResponse.json()
+  const entidadePais = nomeData.entities?.[paisId]
+
+  const nome = entidadePais?.labels?.pt?.value ?? null
+  // P297 é o código ISO 3166-1 alpha-2 do país na Wikidata
+  const codigo = entidadePais?.claims?.P297?.[0]?.mainsnak?.datavalue?.value ?? null
+
+  if (!nome) return null
+
+  return { pais: nome, codigoPais: codigo }
+}
+
+export async function buscarOrigemAutor(nomeAutor: string): Promise<OrigemAutor> {
+  const vazio: OrigemAutor = { pais: null, codigoPais: null }
+
+  try {
+    // Tenta primeiro via busca da própria Wikipedia (mais precisa em achar a pessoa certa)
+    for (const idioma of ['en', 'pt']) {
+      const qid = await buscarQidViaWikipedia(nomeAutor, idioma)
+      if (qid) {
+        const resultado = await buscarDadosPais(qid)
+        if (resultado) return resultado
+      }
+    }
+
+    // Se não achou, tenta a busca direta da Wikidata como último recurso
+    for (const idioma of ['en', 'pt']) {
+      const qid = await buscarQidViaWikidataSearch(nomeAutor, idioma)
+      if (qid) {
+        const resultado = await buscarDadosPais(qid)
+        if (resultado) return resultado
+      }
+    }
+
+    return vazio
+  } catch {
+    return vazio
+  }
 }
