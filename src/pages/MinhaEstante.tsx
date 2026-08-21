@@ -160,6 +160,20 @@ export function MinhaEstante() {
     }
   }
 
+  async function handleAtualizarMetadados(livro: Book) {
+    const resultado = await buscarLivroPorIsbn(livro.isbn)
+    if (!resultado) return
+
+    const { error } = await supabase
+      .from('books')
+      .update({ genre: resultado.genre ?? 'Não classificado' })
+      .eq('id', livro.id)
+
+    if (!error) {
+      carregarLivros()
+    }
+  }
+
   return (
     <>
       <AppHeader showNav />
@@ -264,6 +278,14 @@ export function MinhaEstante() {
                   )}
                   {livro.author_origin}
                 </p>
+                {(!livro.genre || livro.genre === 'Não classificado') && (
+                  <button
+                    onClick={() => handleAtualizarMetadados(livro)}
+                    className="botao-atualizar"
+                  >
+                    🔄 Buscar gênero
+                  </button>
+                )}
                 <button onClick={() => handleRemoverLivro(livro.id)}>Remover</button>
               </div>
             </div>

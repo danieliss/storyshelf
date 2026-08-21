@@ -1,13 +1,32 @@
 export async function buscarLivroPorIsbn(isbnDigitado: string) {
   const isbn = isbnDigitado.replace(/\D/g, '')
 
-  const porBrasilApi = await buscarPorBrasilApi(isbn)
-  if (porBrasilApi) return porBrasilApi
+  let resultado =
+    (await buscarPorBrasilApi(isbn)) ||
+    (await buscarPorGoogleBooksIsbn(isbn)) ||
+    (await buscarPorOpenLibrary(isbn))
 
-  const porGoogleBooks = await buscarPorGoogleBooksIsbn(isbn)
-  if (porGoogleBooks) return porGoogleBooks
+  if (!resultado) return null
 
-  return await buscarPorOpenLibrary(isbn)
+  if (!resultado.genre) {
+    resultado.genre = await buscarGeneroComplementar(isbn)
+  }
+
+  return resultado
+}
+
+async function buscarGeneroComplementar(isbn: string): Promise<string | null> {
+  const apiKey = import.meta.env.VITE_GOOGLE_BOOKS_API_KEY
+
+  const response = await fetch(
+    `https://www.googleapis.com/books/v1/volumes?q=isbn:${isbn}&key=${apiKey}`
+  )
+  if (!response.ok) return null
+
+  const data = await response.json()
+  if (!data.items || data.items.length === 0) return null
+
+  return data.items[0].volumeInfo.categories?.[0] ?? null
 }
 
 async function buscarPorBrasilApi(isbn: string) {
