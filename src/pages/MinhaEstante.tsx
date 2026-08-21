@@ -285,7 +285,7 @@ export function MinhaEstante() {
                 </p>
                 {livro.purchase_url && (
                   
-                    href={livro.purchase_url}
+                    <a href={livro.purchase_url}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="link-comprar"
