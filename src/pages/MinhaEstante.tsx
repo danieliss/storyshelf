@@ -10,6 +10,7 @@ import { BookCover } from '../components/BookCover'
 import { AppHeader } from '../components/AppHeader'
 import { BarcodeScanner } from '../components/BarcodeScanner'
 import { LibraryStats } from '../components/LibraryStats'
+import { pareceAsin, linkProdutoAmazon } from '../utils/amazon'
 import './MinhaEstante.css'
 
 export function MinhaEstante() {
@@ -81,6 +82,12 @@ export function MinhaEstante() {
   }
 
   async function handleAdicionarPorIsbn() {
+    if (pareceAsin(isbn)) {
+      setErro('Isso parece ser um ASIN da Amazon (e-book exclusivo). Abrimos a página do produto em outra aba — você pode cadastrar esse livro manualmente em breve.')
+      window.open(linkProdutoAmazon(isbn), '_blank')
+      return
+    }
+
     const isbnLimpo = isbn.replace(/\D/g, '')
 
     if (!isbnLimpo) {
@@ -276,6 +283,16 @@ export function MinhaEstante() {
                   </span>
                   {livro.author_origin}
                 </p>
+                {livro.purchase_url && (
+                  
+                    href={livro.purchase_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="link-comprar"
+                  >
+                    🛒 Ver na loja
+                  </a>
+                )}
                 {(!livro.genre || livro.genre === 'Não classificado') && (
                   <button
                     onClick={() => handleAtualizarMetadados(livro)}

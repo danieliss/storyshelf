@@ -10,4 +10,5 @@ export type Book = {
   publisher: string
   cover_url: string
   created_at: string
+  purchase_url: string
 }
