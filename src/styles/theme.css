@@ -1,0 +1,47 @@
+/* Paleta extraída da identidade visual do StoryShelf */
+:root {
+    /* Cores principais */
+    --color-primary: #A9693C;        /* terracota - ações principais, destaques */
+    --color-primary-dark: #8B5530;   /* terracota mais escuro - hover, gradientes */
+    --color-secondary: #1B2933;      /* azul-marinho escuro - textos, títulos */
+    --color-accent: #4A726B;         /* verde-oliva - detalhes secundários */
+    --color-wood: #6A3310;           /* marrom-madeira - bordas decorativas */
+  
+    /* Fundos */
+    --color-background: #FDFAF5;     /* creme - fundo geral das páginas */
+    --color-surface: #FFFFFF;        /* branco - cards, inputs */
+  
+    /* Texto */
+    --color-text: #1B2933;
+    --color-text-muted: #6B7280;
+  
+    /* Estado */
+    --color-error: #B33A3A;
+    --color-error-bg: #FBEAEA;
+  
+    /* Espaçamento e forma */
+    --radius: 8px;
+    --shadow: 0 2px 8px rgba(27, 41, 51, 0.08);
+  
+    /* Tipografia */
+    --font-heading: Georgia, 'Times New Roman', serif;
+    --font-body: system-ui, -apple-system, sans-serif;
+  }
+  
+  body {
+    background-color: var(--color-background);
+    color: var(--color-text);
+    font-family: var(--font-body);
+    margin: 0;
+  }
+  
+  h1, h2, h3 {
+    font-family: var(--font-heading);
+    color: var(--color-secondary);
+  }
+  
+  button {
+    font-family: var(--font-body);
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+  }

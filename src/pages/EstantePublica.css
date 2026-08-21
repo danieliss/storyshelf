@@ -1,46 +1,115 @@
-.estante-publica-page {
-    max-width: 600px;
-    margin: 40px auto;
-    padding: 0 16px;
-  }
-  
-  .busca-input {
-    width: 100%;
-    padding: 10px;
-    margin-bottom: 20px;
-    border: 1px solid #ccc;
-    border-radius: 6px;
-    box-sizing: border-box;
-  }
-  
-  .vazio {
-    color: #888;
-    text-align: center;
-    margin-top: 20px;
-  }
-  
-  .livro-card {
-    display: flex;
-    align-items: flex-start;
-    gap: 12px;
-    padding: 12px;
-    border: 1px solid #333;
-    border-radius: 8px;
-    margin-bottom: 10px;
-    text-align: left;
-  }
-  
-  .livro-card img {
-    width: 60px;
-    height: 90px;
-    object-fit: cover;
-    flex-shrink: 0;
-  }
-  
-  .livro-card h3 {
-    margin: 0 0 4px 0;
-  }
-  
-  .livro-card p {
-    margin: 0 0 8px 0;
-  }
+.estante-page {
+  max-width: 600px;
+  margin: 40px auto;
+  padding: 0 16px;
+}
+
+.estante-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.estante-header h1 {
+  margin: 0;
+}
+
+.estante-header button {
+  padding: 8px 16px;
+  border: none;
+  border-radius: var(--radius);
+  background-color: var(--color-secondary);
+  color: white;
+  white-space: nowrap;
+}
+
+.adicionar-livro {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.adicionar-livro input {
+  flex: 1;
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: var(--radius);
+}
+
+.adicionar-livro button {
+  padding: 10px 16px;
+  background-color: var(--color-primary);
+  color: white;
+  border: none;
+  border-radius: var(--radius);
+}
+
+.adicionar-livro button:disabled {
+  background-color: var(--color-text-muted);
+  cursor: not-allowed;
+}
+
+.livro-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px;
+  background: var(--color-surface);
+  border: 1px solid #eee;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  margin-bottom: 10px;
+  text-align: left;
+}
+
+.livro-card h3 {
+  margin: 0 0 4px 0;
+  font-size: 16px;
+}
+
+.livro-card p {
+  margin: 0 0 6px 0;
+  color: var(--color-text-muted);
+  font-size: 14px;
+}
+
+.livro-card .editora {
+  font-style: italic;
+  font-size: 13px;
+}
+
+.livro-card button {
+  padding: 6px 12px;
+  border: 1px solid var(--color-error);
+  background: transparent;
+  color: var(--color-error);
+  border-radius: var(--radius);
+  font-size: 13px;
+}
+
+.busca-input {
+  width: 100%;
+  padding: 10px;
+  margin-bottom: 20px;
+  border: 1px solid #ddd;
+  border-radius: var(--radius);
+  box-sizing: border-box;
+  background-color: var(--color-surface);
+  color: var(--color-text);
+}
+
+.adicionar-livro input {
+  flex: 1;
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: var(--radius);
+  background-color: var(--color-surface);
+  color: var(--color-text);
+}
+
+.livro-card .origem {
+  font-size: 12px;
+  color: var(--color-accent);
+}

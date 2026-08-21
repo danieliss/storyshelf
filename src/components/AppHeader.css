@@ -1,0 +1,43 @@
+.app-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 24px;
+    margin-bottom: 24px;
+    border-bottom: 1px solid #eee;
+  }
+  
+  .app-header-logo {
+    height: 44px;
+    width: auto;
+  }
+  
+  .app-header-nav {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+  
+  .app-header-nav a {
+    color: var(--color-secondary);
+    text-decoration: none;
+    font-weight: 500;
+  }
+  
+  .app-header-nav a:hover {
+    color: var(--color-primary);
+  }
+  
+  .botao-sair {
+    padding: 8px 16px;
+    border: 1px solid var(--color-primary);
+    background: transparent;
+    color: var(--color-primary);
+    border-radius: var(--radius);
+    font-weight: 500;
+  }
+  
+  .botao-sair:hover {
+    background: var(--color-primary);
+    color: white;
+  }

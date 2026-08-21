@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { supabase } from '../services/supabaseClient'
+import { AppHeader } from '../components/AppHeader'
 import './Login.css'
 
 export function Cadastro() {
@@ -20,30 +21,33 @@ export function Cadastro() {
   }
 
   return (
-    <div className="login-page">
-      <h1>Criar conta</h1>
+    <>
+      <AppHeader />
+      <div className="login-page">
+        <h1>Criar conta</h1>
 
-      <input
-        type="email"
-        placeholder="Email"
-        value={email}
-        onChange={(e) => setEmail(e.target.value)}
-      />
+        <input
+          type="email"
+          placeholder="Email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+        />
 
-      <input
-        type="password"
-        placeholder="Senha (mínimo 6 caracteres)"
-        value={password}
-        onChange={(e) => setPassword(e.target.value)}
-      />
+        <input
+          type="password"
+          placeholder="Senha (mínimo 6 caracteres)"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+        />
 
-      {mensagem && <p className="erro">{mensagem}</p>}
+        {mensagem && <p className="erro">{mensagem}</p>}
 
-      <button onClick={handleCadastro}>Cadastrar</button>
+        <button onClick={handleCadastro}>Cadastrar</button>
 
-      <p>
-        Já tem conta? <Link to="/login">Fazer login</Link>
-      </p>
-    </div>
+        <p>
+          Já tem conta? <Link to="/login">Fazer login</Link>
+        </p>
+      </div>
+    </>
   )
 }

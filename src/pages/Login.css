@@ -1,4 +1,4 @@
-.login-page {
+  .login-page {
     display: flex;
     flex-direction: column;
     gap: 12px;
@@ -8,20 +8,35 @@
   
   .login-page input {
     padding: 10px;
-    border: 1px solid #ccc;
-    border-radius: 6px;
+    border: 1px solid #ddd;
+    border-radius: var(--radius);
+    background: var(--color-surface);
   }
   
   .login-page button {
     padding: 10px;
-    background-color: #2563eb;
+    background-color: var(--color-primary);
     color: white;
     border: none;
-    border-radius: 6px;
-    cursor: pointer;
+    border-radius: var(--radius);
+  }
+  
+  .login-page button:hover {
+    background-color: var(--color-primary-dark);
   }
   
   .erro {
-    color: red;
+    color: var(--color-error);
+    background: var(--color-error-bg);
+    padding: 8px 12px;
+    border-radius: var(--radius);
     font-size: 14px;
+  }
+
+  .login-page input {
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: var(--radius);
+    background: var(--color-surface);
+    color: var(--color-text);
   }

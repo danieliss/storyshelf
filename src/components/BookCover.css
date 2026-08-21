@@ -1,0 +1,44 @@
+.book-cover-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.book-cover-image,
+.book-cover-placeholder {
+  width: 60px;
+  height: 90px;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
+.book-cover-image {
+  object-fit: cover;
+}
+
+.book-cover-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dark));
+  color: white;
+  font-family: Georgia, serif;
+  font-size: 28px;
+  font-weight: bold;
+}
+
+.book-cover-upload-link {
+  border: none;
+  background: none;
+  color: var(--color-primary);
+  font-size: 11px;
+  text-decoration: underline;
+  cursor: pointer;
+  padding: 0;
+  white-space: nowrap;
+}
+
+.book-cover-upload-link:hover {
+  color: var(--color-primary-dark);
+}

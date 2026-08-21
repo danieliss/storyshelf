@@ -1,17 +1,22 @@
 import { useState, useEffect } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
 import { supabase } from '../services/supabaseClient'
-import { buscarLivroPorIsbn } from '../services/isbnApi'
+import { buscarLivroPorIsbn, buscarLivrosPorTexto } from '../services/isbnApi'
+import type { ResultadoBusca } from '../services/isbnApi'
+import { uploadCapaPersonalizada } from '../services/coverUpload'
+import { buscarOrigemAutor } from '../services/authorOrigin'
 import type { Book } from '../types/book'
-import { useAuth } from '../hooks/useAuth'
+import { BookCover } from '../components/BookCover'
+import { AppHeader } from '../components/AppHeader'
 import './MinhaEstante.css'
 
 export function MinhaEstante() {
-  const navigate = useNavigate()
-  const { logout } = useAuth()
-
   const [livros, setLivros] = useState<Book[]>([])
+  const [modoBusca, setModoBusca] = useState<'isbn' | 'texto'>('isbn')
+
   const [isbn, setIsbn] = useState('')
+  const [termoBusca, setTermoBusca] = useState('')
+  const [resultadosBusca, setResultadosBusca] = useState<ResultadoBusca[]>([])
+
   const [carregando, setCarregando] = useState(false)
   const [erro, setErro] = useState('')
 
@@ -36,44 +41,99 @@ export function MinhaEstante() {
     }
   }
 
-  async function handleAdicionarLivro() {
-    setErro('')
-    setCarregando(true)
-
-    const resultado = await buscarLivroPorIsbn(isbn)
-
-    if (!resultado) {
-      setErro('ISBN não encontrado.')
-      setCarregando(false)
-      return
-    }
-
+  async function salvarLivro(dados: {
+    isbn: string
+    title: string
+    author: string
+    publisher: string
+    cover_url: string
+  }) {
     const { data: userData } = await supabase.auth.getUser()
     const userId = userData.user?.id
 
     if (!userId) {
       setErro('Você precisa estar logado para adicionar um livro.')
-      setCarregando(false)
-      return
+      return false
     }
+
+    const origemAutor = await buscarOrigemAutor(dados.author)
 
     const { error } = await supabase.from('books').insert({
       user_id: userId,
-      isbn,
-      title: resultado.title,
-      author: resultado.author,
-      publisher: resultado.publisher,
-      cover_url: resultado.cover_url,
+      ...dados,
+      author_origin: origemAutor ?? 'Origem desconhecida',
     })
 
     if (error) {
       setErro('Erro ao salvar livro.')
-    } else {
-      setIsbn('')
-      carregarLivros()
+      return false
     }
 
-    setCarregando(false)
+    carregarLivros()
+    return true
+  }
+
+  async function handleAdicionarPorIsbn() {
+    const isbnLimpo = isbn.replace(/\D/g, '')
+
+    if (!isbnLimpo) {
+      setErro('Digite um ISBN válido (somente números).')
+      return
+    }
+
+    setErro('')
+    setCarregando(true)
+
+    try {
+      const resultado = await buscarLivroPorIsbn(isbnLimpo)
+
+      if (!resultado) {
+        setErro('ISBN não encontrado.')
+        return
+      }
+
+      const sucesso = await salvarLivro({ isbn: isbnLimpo, ...resultado })
+      if (sucesso) {
+        setIsbn('')
+      }
+    } catch {
+      setErro('Erro ao buscar o livro. Tente novamente em instantes.')
+    } finally {
+      setCarregando(false)
+    }
+  }
+
+  async function handleBuscarPorTexto() {
+    if (!termoBusca.trim()) {
+      setErro('Digite um título ou autor antes de buscar.')
+      return
+    }
+
+    setErro('')
+    setCarregando(true)
+    setResultadosBusca([])
+
+    try {
+      const resultados = await buscarLivrosPorTexto(termoBusca)
+
+      if (resultados.length === 0) {
+        setErro('Nenhum livro encontrado com esse termo.')
+      } else {
+        setResultadosBusca(resultados)
+      }
+    } catch {
+      setErro('Erro ao buscar livros. Tente novamente em instantes.')
+    } finally {
+      setCarregando(false)
+    }
+  }
+
+  async function handleSelecionarResultado(resultado: ResultadoBusca) {
+    const sucesso = await salvarLivro(resultado)
+    if (sucesso) {
+      setTermoBusca('')
+      setResultadosBusca([])
+    }
   }
 
   async function handleRemoverLivro(id: string) {
@@ -84,48 +144,104 @@ export function MinhaEstante() {
     }
   }
 
-  async function handleLogout() {
-    await logout()
-    navigate('/login')
+  async function handleUploadCapa(livroId: string, file: File) {
+    try {
+      await uploadCapaPersonalizada(livroId, file)
+      await carregarLivros()
+    } catch {
+      setErro('Erro ao enviar a imagem da capa.')
+    }
   }
 
   return (
-    <div className="estante-page">
-      <div className="estante-header">
+    <>
+      <AppHeader showNav />
+      <div className="estante-page">
         <h1>Minha Estante</h1>
-        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-          <Link to="/estante-publica">Ver estante pública</Link>
-          <button onClick={handleLogout}>Sair</button>
+
+        <div className="modo-busca">
+          <button
+            className={modoBusca === 'isbn' ? 'ativo' : ''}
+            onClick={() => setModoBusca('isbn')}
+          >
+            Buscar por ISBN
+          </button>
+          <button
+            className={modoBusca === 'texto' ? 'ativo' : ''}
+            onClick={() => setModoBusca('texto')}
+          >
+            Buscar por título ou autor
+          </button>
+        </div>
+
+        {modoBusca === 'isbn' ? (
+          <div className="adicionar-livro">
+            <input
+              type="text"
+              placeholder="Digite o ISBN"
+              value={isbn}
+              onChange={(e) => setIsbn(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleAdicionarPorIsbn()}
+            />
+            <button onClick={handleAdicionarPorIsbn} disabled={carregando}>
+              {carregando ? 'Buscando...' : 'Adicionar'}
+            </button>
+          </div>
+        ) : (
+          <div className="adicionar-livro">
+            <input
+              type="text"
+              placeholder="Digite o título ou autor"
+              value={termoBusca}
+              onChange={(e) => setTermoBusca(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleBuscarPorTexto()}
+            />
+            <button onClick={handleBuscarPorTexto} disabled={carregando}>
+              {carregando ? 'Buscando...' : 'Buscar'}
+            </button>
+          </div>
+        )}
+
+        {erro && <p className="erro">{erro}</p>}
+
+        {resultadosBusca.length > 0 && (
+          <div className="resultados-busca">
+            {resultadosBusca.map((resultado) => (
+              <div
+                key={resultado.isbn}
+                className="resultado-item"
+                onClick={() => handleSelecionarResultado(resultado)}
+              >
+                <BookCover title={resultado.title} coverUrl={resultado.cover_url} />
+                <div>
+                  <h4>{resultado.title}</h4>
+                  <p>{resultado.author}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <div className="lista-livros">
+          {livros.map((livro) => (
+            <div key={livro.id} className="livro-card" data-testid={`livro-${livro.isbn}`}>
+              <BookCover
+                title={livro.title}
+                coverUrl={livro.cover_url}
+                editable
+                onSelecionarArquivo={(file) => handleUploadCapa(livro.id, file)}
+              />
+              <div>
+                <h3>{livro.title}</h3>
+                <p>{livro.author}</p>
+                <p className="editora">{livro.publisher}</p>
+                <p className="origem">{livro.author_origin}</p>
+                <button onClick={() => handleRemoverLivro(livro.id)}>Remover</button>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
-
-      <div className="adicionar-livro">
-        <input
-          type="text"
-          placeholder="Digite o ISBN"
-          value={isbn}
-          onChange={(e) => setIsbn(e.target.value)}
-        />
-        <button onClick={handleAdicionarLivro} disabled={carregando}>
-          {carregando ? 'Buscando...' : 'Adicionar'}
-        </button>
-      </div>
-
-      {erro && <p className="erro">{erro}</p>}
-
-      <div className="lista-livros">
-        {livros.map((livro) => (
-          <div key={livro.id} className="livro-card" data-testid={`livro-${livro.isbn}`}>
-            {livro.cover_url && <img src={livro.cover_url} alt={livro.title} />}
-            <div>
-              <h3>{livro.title}</h3>
-              <p>{livro.author}</p>
-              <p className="editora">{livro.publisher}</p>
-              <button onClick={() => handleRemoverLivro(livro.id)}>Remover</button>
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
+    </>
   )
 }
