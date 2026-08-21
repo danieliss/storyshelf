@@ -1,3 +1,5 @@
+import { normalizarGenero } from '../utils/genre'
+
 export async function buscarLivroPorIsbn(isbnDigitado: string) {
   const isbn = isbnDigitado.replace(/\D/g, '')
 
@@ -11,8 +13,9 @@ export async function buscarLivroPorIsbn(isbnDigitado: string) {
   if (!resultado.genre) {
     resultado.genre = await buscarGeneroComplementar(isbn)
   }
-
+  resultado.genre = normalizarGenero(resultado.genre)
   return resultado
+  
 }
 
 async function buscarGeneroComplementar(isbn: string): Promise<string | null> {
@@ -114,6 +117,7 @@ export async function buscarLivrosPorTexto(termo: string): Promise<ResultadoBusc
       const info = item.volumeInfo
       const isbn13 = info.industryIdentifiers?.find((id: any) => id.type === 'ISBN_13')
       const isbn10 = info.industryIdentifiers?.find((id: any) => id.type === 'ISBN_10')
+      
 
       return {
         isbn: isbn13?.identifier ?? isbn10?.identifier ?? '',
@@ -121,7 +125,7 @@ export async function buscarLivrosPorTexto(termo: string): Promise<ResultadoBusc
         author: info.authors?.[0] ?? 'Autor desconhecido',
         publisher: info.publisher ?? 'Editora desconhecida',
         cover_url: info.imageLinks?.thumbnail ?? '',
-        genre: info.categories?.[0] ?? null,
+        genre: normalizarGenero(info.categories?.[0] ?? null),
       }
     })
     .filter((livro: ResultadoBusca) => livro.isbn !== '')

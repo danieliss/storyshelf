@@ -40,3 +40,25 @@
     font-size: 13px;
     color: var(--color-text-muted);
   }
+
+.scanner-status {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.scanner-pulso {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--color-primary);
+  animation: pulsar 1s infinite ease-in-out;
+  flex-shrink: 0;
+}
+
+@keyframes pulsar {
+  0%, 100% { opacity: 0.3; transform: scale(0.8); }
+  50% { opacity: 1; transform: scale(1.2); }
+}

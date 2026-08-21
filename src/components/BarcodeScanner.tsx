@@ -1,3 +1,4 @@
+// src/components/BarcodeScanner.tsx (arquivo completo)
 import { useEffect, useRef, useState } from 'react'
 import { Html5Qrcode, Html5QrcodeSupportedFormats } from 'html5-qrcode'
 import './BarcodeScanner.css'
@@ -22,7 +23,6 @@ export function BarcodeScanner({ onDetectado, onFechar }: Props) {
     async function iniciar() {
       try {
         const cameras = await Html5Qrcode.getCameras()
-
         if (cancelado) return
 
         if (!cameras || cameras.length === 0) {
@@ -59,9 +59,7 @@ export function BarcodeScanner({ onDetectado, onFechar }: Props) {
             onDetectado(textoDetectado)
             pararScanner()
           },
-          () => {
-            // erro de leitura em um frame específico — normal, ignorado
-          }
+          () => {}
         )
 
         if (cancelado) {
@@ -72,7 +70,6 @@ export function BarcodeScanner({ onDetectado, onFechar }: Props) {
         rodandoRef.current = true
         setCarregandoCamera(false)
 
-        // se não conseguir ler em 20 segundos, avisa o usuário
         timeoutSemLeitura = setTimeout(() => {
           if (!cancelado) setSemLeitura(true)
         }, 20000)
@@ -121,15 +118,15 @@ export function BarcodeScanner({ onDetectado, onFechar }: Props) {
 
         <div id={containerId} className="scanner-video" />
 
-        {!erro && !carregandoCamera && !semLeitura && (
-          <p className="scanner-dica">Aponte a câmera para o código de barras do livro</p>
-        )}
-
-        {semLeitura && (
-          <p className="scanner-dica scanner-aviso">
-            Não conseguimos ler o código. Tente aproximar mais, melhorar a iluminação, ou
-            feche esta janela e digite o ISBN manualmente.
-          </p>
+        {!erro && !carregandoCamera && (
+          <div className="scanner-status">
+            <span className="scanner-pulso"></span>
+            <p className={semLeitura ? 'scanner-aviso' : 'scanner-dica'}>
+              {semLeitura
+                ? 'Não conseguimos ler o código. Tente aproximar, melhorar a iluminação, ou feche e digite o ISBN manualmente.'
+                : 'Buscando código de barras...'}
+            </p>
+          </div>
         )}
       </div>
     </div>

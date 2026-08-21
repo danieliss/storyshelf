@@ -4,7 +4,7 @@ import { buscarLivroPorIsbn, buscarLivrosPorTexto } from '../services/isbnApi'
 import type { ResultadoBusca } from '../services/isbnApi'
 import { uploadCapaPersonalizada } from '../services/coverUpload'
 import { buscarOrigemAutor } from '../services/authorOrigin'
-import { bandeiraDoCodigoPais } from '../utils/flag'
+import { FlagIcon } from '../components/FlagIcon'
 import type { Book } from '../types/book'
 import { BookCover } from '../components/BookCover'
 import { AppHeader } from '../components/AppHeader'
@@ -271,11 +271,9 @@ export function MinhaEstante() {
                 <p>{livro.author}</p>
                 <p className="editora">{livro.publisher}</p>
                 <p className="origem">
-                  {livro.author_origin_code && (
-                    <span className="bandeira-inline">
-                      {bandeiraDoCodigoPais(livro.author_origin_code)}
-                    </span>
-                  )}
+                  <span className="bandeira-inline">
+                    <FlagIcon codigoPais={livro.author_origin_code} />
+                  </span>
                   {livro.author_origin}
                 </p>
                 {(!livro.genre || livro.genre === 'Não classificado') && (

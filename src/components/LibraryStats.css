@@ -62,3 +62,10 @@
   .stats-vazio {
     color: var(--color-text-muted);
   }
+
+.flag-icon {
+  width: 20px;
+  height: 15px;
+  border-radius: 2px;
+  vertical-align: middle;
+}

@@ -1,5 +1,5 @@
 import type { Book } from '../types/book'
-import { bandeiraDoCodigoPais } from '../utils/flag'
+import { FlagIcon } from './FlagIcon.tsx'
 import './LibraryStats.css'
 
 type Props = {
@@ -65,7 +65,7 @@ export function LibraryStats({ livros, titulo }: Props) {
             <span className="stats-label">
               {origem !== 'Origem desconhecida' && (
                 <span className="stats-bandeira">
-                  {bandeiraDoCodigoPais(codigoDoPais(livros, origem))}
+                  <FlagIcon codigoPais={codigoDoPais(livros, origem)} />
                 </span>
               )}
               {origem}
