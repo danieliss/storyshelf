@@ -1,69 +1,41 @@
 // src/services/authorOrigin.ts
 
-async function buscarCandidatosEntidade(nomeAutor: string, idioma: string): Promise<string[]> {
-  const url = `https://www.wikidata.org/w/api.php?action=wbsearchentities&search=${encodeURIComponent(nomeAutor)}&language=${idioma}&format=json&origin=*&type=item&limit=5`
+async function buscarNomePaisEmPt(nomeAutor: string): Promise<string | null> {
+  const nomeSeguro = nomeAutor.replace(/"/g, '')
 
-  const response = await fetch(url)
-  if (!response.ok) return []
+  const sparql = `
+    SELECT ?paisLabel WHERE {
+      SERVICE wikibase:mwapi {
+        bd:serviceParam wikibase:api "EntitySearch".
+        bd:serviceParam wikibase:endpoint "www.wikidata.org".
+        bd:serviceParam mwapi:search "${nomeSeguro}".
+        bd:serviceParam mwapi:language "en".
+        bd:serviceParam mwapi:limit "10".
+        ?item wikibase:apiOutputItem mwapi:item.
+      }
+      ?item wdt:P31 wd:Q5.
+      ?item wdt:P27 ?pais.
+      SERVICE wikibase:label { bd:serviceParam wikibase:language "pt,en". }
+    }
+    LIMIT 1
+  `
 
-  const data = await response.json()
-  return (data.search ?? []).map((item: any) => item.id)
-}
+  const url = `https://query.wikidata.org/sparql?query=${encodeURIComponent(sparql)}&format=json`
 
-async function ehPessoa(entidadeId: string, claims: any): Promise<boolean> {
-  const instanciaDe = claims?.P31 ?? []
-  return instanciaDe.some((c: any) => c.mainsnak?.datavalue?.value?.id === 'Q5')
-}
-
-async function buscarClaims(entidadeId: string): Promise<any> {
-  const url = `https://www.wikidata.org/w/api.php?action=wbgetentities&ids=${entidadeId}&props=claims&format=json&origin=*`
-
-  const response = await fetch(url)
-  if (!response.ok) return null
-
-  const data = await response.json()
-  return data.entities?.[entidadeId]?.claims ?? null
-}
-
-async function buscarNomePais(paisId: string): Promise<string | null> {
-  const url = `https://www.wikidata.org/w/api.php?action=wbgetentities&ids=${paisId}&props=labels&languages=pt&format=json&origin=*`
-
-  const response = await fetch(url)
-  if (!response.ok) return null
-
-  const data = await response.json()
-  return data.entities?.[paisId]?.labels?.pt?.value ?? null
-}
-
-async function tentarEncontrarPais(nomeAutor: string, idioma: string): Promise<string | null> {
-  const candidatos = await buscarCandidatosEntidade(nomeAutor, idioma)
-
-  for (const entidadeId of candidatos) {
-    const claims = await buscarClaims(entidadeId)
-    if (!claims) continue
-
-    const eHumano = await ehPessoa(entidadeId, claims)
-    if (!eHumano) continue
-
-    const paisId = claims?.P27?.[0]?.mainsnak?.datavalue?.value?.id
-    if (!paisId) continue
-
-    return await buscarNomePais(paisId)
-  }
-
-  return null
-}
-
-export async function buscarOrigemAutor(nomeAutor: string): Promise<string | null> {
   try {
-    const resultadoEm = await tentarEncontrarPais(nomeAutor, 'en')
-    if (resultadoEm) return resultadoEm
+    const response = await fetch(url, {
+      headers: { Accept: 'application/sparql-results+json' },
+    })
 
-    const resultadoPt = await tentarEncontrarPais(nomeAutor, 'pt')
-    if (resultadoPt) return resultadoPt
+    if (!response.ok) return null
 
-    return null
+    const data = await response.json()
+    return data.results?.bindings?.[0]?.paisLabel?.value ?? null
   } catch {
     return null
   }
+}
+
+export async function buscarOrigemAutor(nomeAutor: string): Promise<string | null> {
+  return await buscarNomePaisEmPt(nomeAutor)
 }
