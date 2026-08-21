@@ -13,9 +13,11 @@ export function BarcodeScanner({ onDetectado, onFechar }: Props) {
   const rodandoRef = useRef(false)
   const [erro, setErro] = useState('')
   const [carregandoCamera, setCarregandoCamera] = useState(true)
+  const [semLeitura, setSemLeitura] = useState(false)
 
   useEffect(() => {
     let cancelado = false
+    let timeoutSemLeitura: ReturnType<typeof setTimeout>
 
     async function iniciar() {
       try {
@@ -29,20 +31,30 @@ export function BarcodeScanner({ onDetectado, onFechar }: Props) {
           return
         }
 
-        // Tenta achar a câmera traseira pelo nome; se não achar, usa a última da lista
-        // (em celulares, a traseira geralmente vem depois da frontal na lista)
         const traseira = cameras.find((c) => /back|traseira|rear/i.test(c.label))
         const cameraId = traseira?.id ?? cameras[cameras.length - 1].id
 
         const scanner = new Html5Qrcode(containerId, {
-          formatsToSupport: [Html5QrcodeSupportedFormats.EAN_13],
+          formatsToSupport: [
+            Html5QrcodeSupportedFormats.EAN_13,
+            Html5QrcodeSupportedFormats.UPC_A,
+          ],
           verbose: false,
+          useBarCodeDetectorIfSupported: true,
         })
         scannerRef.current = scanner
 
         await scanner.start(
           cameraId,
-          { fps: 10, qrbox: { width: 300, height: 120 } },
+          {
+            fps: 10,
+            qrbox: { width: 300, height: 150 },
+            videoConstraints: {
+              deviceId: cameraId,
+              width: { min: 1280, ideal: 1920 },
+              height: { min: 720, ideal: 1080 },
+            },
+          },
           (textoDetectado) => {
             onDetectado(textoDetectado)
             pararScanner()
@@ -59,7 +71,12 @@ export function BarcodeScanner({ onDetectado, onFechar }: Props) {
 
         rodandoRef.current = true
         setCarregandoCamera(false)
-      } catch (e) {
+
+        // se não conseguir ler em 20 segundos, avisa o usuário
+        timeoutSemLeitura = setTimeout(() => {
+          if (!cancelado) setSemLeitura(true)
+        }, 20000)
+      } catch {
         if (!cancelado) {
           setErro('Não foi possível acessar a câmera. Verifique as permissões do navegador.')
           setCarregandoCamera(false)
@@ -71,6 +88,7 @@ export function BarcodeScanner({ onDetectado, onFechar }: Props) {
 
     return () => {
       cancelado = true
+      clearTimeout(timeoutSemLeitura)
       pararScanner()
     }
   }, [])
@@ -103,8 +121,15 @@ export function BarcodeScanner({ onDetectado, onFechar }: Props) {
 
         <div id={containerId} className="scanner-video" />
 
-        {!erro && !carregandoCamera && (
+        {!erro && !carregandoCamera && !semLeitura && (
           <p className="scanner-dica">Aponte a câmera para o código de barras do livro</p>
+        )}
+
+        {semLeitura && (
+          <p className="scanner-dica scanner-aviso">
+            Não conseguimos ler o código. Tente aproximar mais, melhorar a iluminação, ou
+            feche esta janela e digite o ISBN manualmente.
+          </p>
         )}
       </div>
     </div>
