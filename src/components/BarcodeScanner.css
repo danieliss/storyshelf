@@ -1,0 +1,39 @@
+.scanner-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(27, 41, 51, 0.85);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+  }
+  
+  .scanner-modal {
+    background: white;
+    border-radius: var(--radius);
+    padding: 20px;
+    max-width: 400px;
+    width: 90%;
+    text-align: center;
+  }
+  
+  .scanner-video {
+    width: 100%;
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+  
+  .scanner-fechar {
+    margin-bottom: 12px;
+    padding: 8px 16px;
+    border: 1px solid var(--color-secondary);
+    background: transparent;
+    color: var(--color-secondary);
+    border-radius: var(--radius);
+  }
+  
+  .scanner-dica {
+    margin-top: 12px;
+    font-size: 13px;
+    color: var(--color-text-muted);
+  }

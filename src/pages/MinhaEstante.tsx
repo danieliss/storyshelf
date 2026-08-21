@@ -7,6 +7,7 @@ import { buscarOrigemAutor } from '../services/authorOrigin'
 import type { Book } from '../types/book'
 import { BookCover } from '../components/BookCover'
 import { AppHeader } from '../components/AppHeader'
+import { BarcodeScanner } from '../components/BarcodeScanner'
 import './MinhaEstante.css'
 
 export function MinhaEstante() {
@@ -16,7 +17,7 @@ export function MinhaEstante() {
   const [isbn, setIsbn] = useState('')
   const [termoBusca, setTermoBusca] = useState('')
   const [resultadosBusca, setResultadosBusca] = useState<ResultadoBusca[]>([])
-
+  const [mostrarScanner, setMostrarScanner] = useState(false)
   const [carregando, setCarregando] = useState(false)
   const [erro, setErro] = useState('')
 
@@ -186,6 +187,9 @@ export function MinhaEstante() {
             <button onClick={handleAdicionarPorIsbn} disabled={carregando}>
               {carregando ? 'Buscando...' : 'Adicionar'}
             </button>
+            <button type="button" onClick={() => setMostrarScanner(true)}>
+              📷 Escanear
+            </button>
           </div>
         ) : (
           <div className="adicionar-livro">
@@ -242,6 +246,16 @@ export function MinhaEstante() {
           ))}
         </div>
       </div>
+
+      {mostrarScanner && (
+        <BarcodeScanner
+          onDetectado={(codigoDetectado) => {
+            setIsbn(codigoDetectado)
+            setMostrarScanner(false)
+          }}
+          onFechar={() => setMostrarScanner(false)}
+        />
+      )}
     </>
   )
 }
