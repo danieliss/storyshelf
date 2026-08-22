@@ -77,8 +77,8 @@ export function MinhaEstante() {
     const { error } = await supabase.from('books').insert({
       user_id: userId,
       ...dados,
-      genre: dados.genre ?? 'Não classificado',
-      author_origin: origemAutor.pais ?? 'Origem desconhecida',
+      genre: dados.genre ?? 'Gênero não identificado',
+      author_origin: origemAutor.pais ?? 'Nacionalidade não identificada',
       author_origin_code: origemAutor.codigoPais,
     })
 
@@ -184,7 +184,7 @@ export function MinhaEstante() {
 
     const atualizacao: Record<string, string | null> = {}
 
-    if (resultado?.genre && (!livro.genre || livro.genre === 'Não classificado')) {
+    if (resultado?.genre && (!livro.genre || livro.genre === 'Gênero não identificado')) {
       atualizacao.genre = resultado.genre
     }
     if (resultado?.synopsis && (!livro.synopsis || livro.synopsis === 'Sinopse não disponível.')) {
@@ -193,7 +193,7 @@ export function MinhaEstante() {
     if (resultado?.format && !livro.format) {
       atualizacao.format = resultado.format
     }
-    if (origemAutor.pais && (!livro.author_origin || livro.author_origin === 'Origem desconhecida')) {
+    if (origemAutor.pais && (!livro.author_origin || livro.author_origin === 'Nacionalidade não identificada')) {
       atualizacao.author_origin = origemAutor.pais
       atualizacao.author_origin_code = origemAutor.codigoPais
     }
@@ -221,9 +221,9 @@ export function MinhaEstante() {
     const pendentes = livros.filter(
       (l) =>
         !l.genre ||
-        l.genre === 'Não classificado' ||
+        l.genre === 'Gênero não identificado' ||
         !l.author_origin ||
-        l.author_origin === 'Origem desconhecida'
+        l.author_origin === 'Nacionalidade não identificada'
     )
     if (pendentes.length === 0) return
 
@@ -273,9 +273,9 @@ export function MinhaEstante() {
         {livros.some(
           (l) =>
             !l.genre ||
-            l.genre === 'Não classificado' ||
+            l.genre === 'Gênero não identificado' ||
             !l.author_origin ||
-            l.author_origin === 'Origem desconhecida'
+            l.author_origin === 'Nacionalidade não identificada'
         ) && (
           <button
             className="botao-atualizar-lote"

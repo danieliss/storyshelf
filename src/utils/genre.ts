@@ -1,5 +1,4 @@
 const mapeamento: Array<{ palavras: string[]; categoria: string }> = [
-  // Sub-gêneros específicos primeiro
   { palavras: ['erotica'], categoria: 'Romance Erótico' },
   { palavras: ['historical romance', 'romance / historical'], categoria: 'Romance de Época' },
   { palavras: ['romance'], categoria: 'Romance' },
@@ -11,8 +10,6 @@ const mapeamento: Array<{ palavras: string[]; categoria: string }> = [
   { palavras: ['juvenile', "children's"], categoria: 'Infantojuvenil' },
   { palavras: ['comics', 'graphic novels'], categoria: 'Quadrinhos' },
   { palavras: ['drama', 'performing arts'], categoria: 'Drama e Teatro' },
-
-  // Genéricos depois
   { palavras: ['fiction', 'novel'], categoria: 'Ficção' },
   { palavras: ['biography', 'autobiography'], categoria: 'Biografia' },
   { palavras: ['poetry'], categoria: 'Poesia' },
@@ -33,7 +30,7 @@ const mapeamento: Array<{ palavras: string[]; categoria: string }> = [
 ]
 
 export function normalizarGenero(bruto: string | null): string {
-  if (!bruto) return 'Não classificado'
+  if (!bruto) return 'Gênero não identificado'
 
   const textoBusca = bruto.toLowerCase()
 

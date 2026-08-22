@@ -125,3 +125,30 @@
     color: var(--color-text-muted);
     margin-top: 8px;
   }
+  .botao-adicionar-estante {
+    display: block;
+    width: 100%;
+    padding: 10px;
+    margin-bottom: 16px;
+    background: var(--color-accent);
+    color: white;
+    border: none;
+    border-radius: var(--radius);
+    cursor: pointer;
+  }
+  
+  .botao-adicionar-estante:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+  
+  .ja-na-estante {
+    color: var(--color-accent);
+    font-size: 13px;
+    margin-bottom: 16px;
+  }
+  
+  .sinopse-carregando {
+    color: var(--color-text-muted);
+    font-style: italic;
+  }

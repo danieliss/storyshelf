@@ -1,6 +1,8 @@
+import { useState, useEffect } from 'react'
 import type { Book } from '../types/book'
 import { FlagIcon } from './FlagIcon'
 import { BookCover } from './BookCover'
+import { buscarLivroPorIsbn } from '../services/isbnApi'
 import { linkBuscaAmazon, linkBuscaEstanteVirtual, confirmarEAbrirLink } from '../utils/marketplaces'
 import './BookDetailModal.css'
 
@@ -10,18 +12,51 @@ type Props = {
   onAtualizar?: () => void
   atualizando?: boolean
   editavel?: boolean
+  jaNaMinhaEstante?: boolean
+  onAdicionarAMinhaEstante?: () => void
+  adicionando?: boolean
 }
 
-export function BookDetailModal({ livro, onFechar, onAtualizar, atualizando, editavel }: Props) {
+export function BookDetailModal({
+  livro,
+  onFechar,
+  onAtualizar,
+  atualizando,
+  editavel,
+  jaNaMinhaEstante,
+  onAdicionarAMinhaEstante,
+  adicionando,
+}: Props) {
   const termoBusca = `${livro.title} ${livro.author}`
+  const [sinopseExibida, setSinopseExibida] = useState(livro.synopsis)
+  const [buscandoSinopse, setBuscandoSinopse] = useState(false)
+
+  useEffect(() => {
+    setSinopseExibida(livro.synopsis)
+
+    const faltaSinopse = !livro.synopsis || livro.synopsis === 'Sinopse não disponível.'
+    if (!faltaSinopse) return
+
+    let cancelado = false
+    setBuscandoSinopse(true)
+
+    buscarLivroPorIsbn(livro.isbn).then((resultado) => {
+      if (!cancelado && resultado?.synopsis) {
+        setSinopseExibida(resultado.synopsis)
+      }
+      if (!cancelado) setBuscandoSinopse(false)
+    })
+
+    return () => {
+      cancelado = true
+    }
+  }, [livro.isbn, livro.synopsis])
 
   const faltaAlgumDado =
     !livro.genre ||
-    livro.genre === 'Não classificado' ||
+    livro.genre === 'Gênero não identificado' ||
     !livro.author_origin ||
-    livro.author_origin === 'Origem desconhecida' ||
-    !livro.synopsis ||
-    livro.synopsis === 'Sinopse não disponível.'
+    livro.author_origin === 'Nacionalidade não identificada'
 
   return (
     <div className="modal-overlay" onClick={onFechar}>
@@ -46,9 +81,27 @@ export function BookDetailModal({ livro, onFechar, onAtualizar, atualizando, edi
           </div>
         </div>
 
+        {onAdicionarAMinhaEstante && !jaNaMinhaEstante && (
+          <button
+            className="botao-adicionar-estante"
+            onClick={onAdicionarAMinhaEstante}
+            disabled={adicionando}
+          >
+            {adicionando ? 'Adicionando...' : '➕ Adicionar à minha estante'}
+          </button>
+        )}
+
+        {jaNaMinhaEstante && (
+          <p className="ja-na-estante">✓ Este livro já está na sua estante</p>
+        )}
+
         <div className="modal-sinopse">
           <h3>Sinopse</h3>
-          <p>{livro.synopsis || 'Sinopse não disponível.'}</p>
+          {buscandoSinopse ? (
+            <p className="sinopse-carregando">Buscando sinopse...</p>
+          ) : (
+            <p>{sinopseExibida || 'Sinopse não disponível.'}</p>
+          )}
         </div>
 
         {editavel && faltaAlgumDado && onAtualizar && (
@@ -61,7 +114,7 @@ export function BookDetailModal({ livro, onFechar, onAtualizar, atualizando, edi
           <h3>Onde comprar</h3>
           {livro.purchase_url && (
             
-             <a href={livro.purchase_url}
+              <a href={livro.purchase_url}
               target="_blank"
               rel="noopener noreferrer"
               className="link-comprar-principal"

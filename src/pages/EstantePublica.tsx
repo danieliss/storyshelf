@@ -10,15 +10,18 @@ import './EstantePublica.css'
 
 export function EstantePublica() {
   const [livros, setLivros] = useState<Book[]>([])
+  const [meusIsbns, setMeusIsbns] = useState<Set<string>>(new Set())
   const [busca, setBusca] = useState('')
   const [generoFiltro, setGeneroFiltro] = useState('')
   const [paisFiltro, setPaisFiltro] = useState('')
   const [mostrarEstatisticas, setMostrarEstatisticas] = useState(false)
   const [erro, setErro] = useState('')
   const [livroSelecionado, setLivroSelecionado] = useState<Book | null>(null)
+  const [adicionando, setAdicionando] = useState(false)
 
   useEffect(() => {
     carregarLivros()
+    carregarMeusIsbns()
   }, [])
 
   async function carregarLivros() {
@@ -32,6 +35,45 @@ export function EstantePublica() {
     } else {
       setLivros(data as Book[])
     }
+  }
+
+  async function carregarMeusIsbns() {
+    const { data: userData } = await supabase.auth.getUser()
+    const userId = userData.user?.id
+    if (!userId) return
+
+    const { data } = await supabase.from('books').select('isbn').eq('user_id', userId)
+    if (data) {
+      setMeusIsbns(new Set(data.map((l) => l.isbn)))
+    }
+  }
+
+  async function handleAdicionarAMinhaEstante(livro: Book) {
+    const { data: userData } = await supabase.auth.getUser()
+    const userId = userData.user?.id
+    if (!userId) return
+
+    setAdicionando(true)
+
+    const { error } = await supabase.from('books').insert({
+      user_id: userId,
+      isbn: livro.isbn,
+      title: livro.title,
+      author: livro.author,
+      publisher: livro.publisher,
+      cover_url: livro.cover_url,
+      genre: livro.genre,
+      author_origin: livro.author_origin,
+      author_origin_code: livro.author_origin_code,
+      synopsis: livro.synopsis,
+      format: livro.format,
+    })
+
+    if (!error) {
+      setMeusIsbns((atual) => new Set(atual).add(livro.isbn))
+    }
+
+    setAdicionando(false)
   }
 
   const generosDisponiveis = Array.from(new Set(livros.map((l) => l.genre).filter(Boolean))).sort()
@@ -153,7 +195,13 @@ export function EstantePublica() {
       </div>
 
       {livroSelecionado && (
-        <BookDetailModal livro={livroSelecionado} onFechar={() => setLivroSelecionado(null)} />
+        <BookDetailModal
+          livro={livroSelecionado}
+          onFechar={() => setLivroSelecionado(null)}
+          jaNaMinhaEstante={meusIsbns.has(livroSelecionado.isbn)}
+          onAdicionarAMinhaEstante={() => handleAdicionarAMinhaEstante(livroSelecionado)}
+          adicionando={adicionando}
+        />
       )}
     </>
   )

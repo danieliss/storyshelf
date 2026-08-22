@@ -1,9 +1,21 @@
 import { normalizarGenero } from '../utils/genre'
+import { ehEditoraConhecida } from '../utils/editorasConhecidas'
 
 type MetadadosComplementares = {
   genre: string | null
   synopsis: string | null
   format: string | null
+}
+
+async function fetchComRetentativa(url: string, tentativas = 2): Promise<Response> {
+  for (let i = 0; i < tentativas; i++) {
+    const response = await fetch(url)
+    if (response.ok || response.status !== 503) {
+      return response
+    }
+    await new Promise((resolve) => setTimeout(resolve, 500))
+  }
+  return fetch(url)
 }
 
 export async function buscarLivroPorIsbn(isbnDigitado: string) {
@@ -33,7 +45,7 @@ export async function buscarLivroPorIsbn(isbnDigitado: string) {
 async function buscarMetadadosComplementares(isbn: string): Promise<MetadadosComplementares> {
   const apiKey = import.meta.env.VITE_GOOGLE_BOOKS_API_KEY
 
-  const response = await fetch(
+  const response = await fetchComRetentativa(
     `https://www.googleapis.com/books/v1/volumes?q=isbn:${isbn}&key=${apiKey}`
   )
   if (!response.ok) return { genre: null, synopsis: null, format: null }
@@ -73,7 +85,7 @@ async function buscarPorBrasilApi(isbn: string) {
 async function buscarPorGoogleBooksIsbn(isbn: string) {
   const apiKey = import.meta.env.VITE_GOOGLE_BOOKS_API_KEY
 
-  const response = await fetch(
+  const response = await fetchComRetentativa(
     `https://www.googleapis.com/books/v1/volumes?q=isbn:${isbn}&key=${apiKey}`
   )
   if (!response.ok) return null
@@ -136,7 +148,7 @@ export type ResultadoBusca = {
 async function buscarPorEditoraGoogleBooks(termo: string): Promise<ResultadoBusca[]> {
   const apiKey = import.meta.env.VITE_GOOGLE_BOOKS_API_KEY
 
-  const response = await fetch(
+  const response = await fetchComRetentativa(
     `https://www.googleapis.com/books/v1/volumes?q=inpublisher:${encodeURIComponent(termo)}&maxResults=10&key=${apiKey}`
   )
   if (!response.ok) return []
@@ -165,45 +177,121 @@ async function buscarPorEditoraGoogleBooks(termo: string): Promise<ResultadoBusc
     .filter((livro: ResultadoBusca) => livro.isbn !== '')
 }
 
-export async function buscarLivrosPorTexto(termo: string): Promise<ResultadoBusca[]> {
+function mapearItemGoogleBooks(item: any): ResultadoBusca {
+  const info = item.volumeInfo
+  const isbn13 = info.industryIdentifiers?.find((id: any) => id.type === 'ISBN_13')
+  const isbn10 = info.industryIdentifiers?.find((id: any) => id.type === 'ISBN_10')
+  const isEbook = item.saleInfo?.isEbook === true
+
+  return {
+    isbn: isbn13?.identifier ?? isbn10?.identifier ?? '',
+    title: info.title ?? 'Título não encontrado',
+    author: info.authors?.[0] ?? 'Autor desconhecido',
+    publisher: info.publisher ?? 'Editora desconhecida',
+    cover_url: info.imageLinks?.thumbnail ?? '',
+    genre: normalizarGenero(info.categories?.[0] ?? null),
+    synopsis: info.description ?? 'Sinopse não disponível.',
+    format: isEbook ? 'Digital' : 'Físico',
+  }
+}
+
+async function buscarComQuery(query: string, maxResults = 10): Promise<ResultadoBusca[]> {
   const apiKey = import.meta.env.VITE_GOOGLE_BOOKS_API_KEY
 
-  const response = await fetch(
-    `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(termo)}&maxResults=10&key=${apiKey}`
+  const response = await fetchComRetentativa(
+    `https://www.googleapis.com/books/v1/volumes?q=${query}&maxResults=${maxResults}&orderBy=relevance&key=${apiKey}`
   )
-
-  if (!response.ok) {
-    throw new Error('Falha ao buscar livros. Tente novamente em instantes.')
-  }
+  if (!response.ok) return []
 
   const data = await response.json()
-  let resultados: ResultadoBusca[] = []
+  if (!data.items) return []
 
-  if (data.items) {
-    resultados = data.items
-      .map((item: any) => {
-        const info = item.volumeInfo
-        const isbn13 = info.industryIdentifiers?.find((id: any) => id.type === 'ISBN_13')
-        const isbn10 = info.industryIdentifiers?.find((id: any) => id.type === 'ISBN_10')
-        const isEbook = item.saleInfo?.isEbook === true
+  return data.items.map(mapearItemGoogleBooks).filter((livro: ResultadoBusca) => livro.isbn !== '')
+}
 
-        return {
-          isbn: isbn13?.identifier ?? isbn10?.identifier ?? '',
-          title: info.title ?? 'Título não encontrado',
-          author: info.authors?.[0] ?? 'Autor desconhecido',
-          publisher: info.publisher ?? 'Editora desconhecida',
-          cover_url: info.imageLinks?.thumbnail ?? '',
-          genre: normalizarGenero(info.categories?.[0] ?? null),
-          synopsis: info.description ?? 'Sinopse não disponível.',
-          format: isEbook ? 'Digital' : 'Físico',
-        }
-      })
-      .filter((livro: ResultadoBusca) => livro.isbn !== '')
+function pareceAutorFicticio(livro: ResultadoBusca): boolean {
+  const autor = livro.author.toLowerCase().trim()
+  const editora = livro.publisher.toLowerCase().trim()
+
+  if (!autor || !editora) return false
+
+  return autor === editora || editora.includes(autor) || autor.includes(editora)
+}
+
+
+
+
+type ResultadoComPopularidade = {
+  livro: ResultadoBusca
+  ratingsCount: number
+}
+
+async function buscarComQueryEPopularidade(
+  query: string,
+  maxResults = 10
+): Promise<ResultadoComPopularidade[]> {
+  const apiKey = import.meta.env.VITE_GOOGLE_BOOKS_API_KEY
+
+  const response = await fetchComRetentativa(
+    `https://www.googleapis.com/books/v1/volumes?q=${query}&maxResults=${maxResults}&orderBy=relevance&key=${apiKey}`
+  )
+  if (!response.ok) return []
+
+  const data = await response.json()
+  if (!data.items) return []
+
+  return data.items
+    .map((item: any) => ({
+      livro: mapearItemGoogleBooks(item),
+      ratingsCount: item.volumeInfo?.ratingsCount ?? 0,
+    }))
+    .filter((r: ResultadoComPopularidade) => r.livro.isbn !== '')
+}
+
+export async function buscarLivrosPorTexto(termo: string): Promise<ResultadoBusca[]> {
+  const termoCodificado = encodeURIComponent(termo)
+
+  const [porAutorBruto, porTitulo, geral] = await Promise.all([
+    buscarComQueryEPopularidade(`inauthor:${termoCodificado}`),
+    buscarComQueryEPopularidade(`intitle:${termoCodificado}`),
+    buscarComQueryEPopularidade(termoCodificado),
+  ])
+
+  const porAutor = porAutorBruto.filter((r) => !pareceAutorFicticio(r.livro))
+
+  const listasComPeso: Array<{ lista: ResultadoComPopularidade[]; peso: number }> = [
+    { lista: porTitulo, peso: 0 },
+    { lista: geral, peso: 5 },
+    { lista: porAutor, peso: 50 },
+  ]
+
+  const melhorScore = new Map<string, number>()
+  const livroPorIsbn = new Map<string, ResultadoBusca>()
+
+  for (const { lista, peso } of listasComPeso) {
+    lista.forEach(({ livro, ratingsCount }, index) => {
+      if (!livro.isbn) return
+
+      const bonusPopularidade = Math.min(ratingsCount, 500) * 0.05
+      const bonusEditora = ehEditoraConhecida(livro.publisher) ? 3 : 0
+      const score = index + peso - bonusPopularidade - bonusEditora
+
+      livroPorIsbn.set(livro.isbn, livro)
+
+      const atual = melhorScore.get(livro.isbn)
+      if (atual === undefined || score < atual) {
+        melhorScore.set(livro.isbn, score)
+      }
+    })
   }
 
-  if (resultados.length === 0) {
-    resultados = await buscarPorEditoraGoogleBooks(termo)
+  const combinados = Array.from(melhorScore.entries())
+    .sort((a, b) => a[1] - b[1])
+    .map(([isbn]) => livroPorIsbn.get(isbn)!)
+
+  if (combinados.length > 0) {
+    return combinados.slice(0, 15)
   }
 
-  return resultados
+  return await buscarPorEditoraGoogleBooks(termo)
 }

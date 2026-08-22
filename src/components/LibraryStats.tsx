@@ -15,7 +15,8 @@ function contarPor(livros: Book[], campo: 'genre' | 'author_origin') {
   const contagem: Record<string, number> = {}
 
   for (const livro of livros) {
-    const valor = livro[campo] || (campo === 'genre' ? 'Não classificado' : 'Origem desconhecida')
+    const valor =
+      livro[campo] || (campo === 'genre' ? 'Gênero não identificado' : 'Nacionalidade não identificada')
     contagem[valor] = (contagem[valor] ?? 0) + 1
   }
 
@@ -85,7 +86,7 @@ export function LibraryStats({
             type="button"
           >
             <span className="stats-label">
-              {origem !== 'Origem desconhecida' && (
+              {origem !== 'Nacionalidade não identificada' && (
                 <span className="stats-bandeira">
                   <FlagIcon codigoPais={codigoDoPais(livros, origem)} />
                 </span>
