@@ -5,14 +5,17 @@ import { BookCover } from '../components/BookCover'
 import { AppHeader } from '../components/AppHeader'
 import { LibraryStats } from '../components/LibraryStats'
 import { FlagIcon } from '../components/FlagIcon'
+import { BookDetailModal } from '../components/BookDetailModal'
 import './EstantePublica.css'
 
 export function EstantePublica() {
   const [livros, setLivros] = useState<Book[]>([])
   const [busca, setBusca] = useState('')
-  const [nacionalidadeFiltro, setNacionalidadeFiltro] = useState('')
+  const [generoFiltro, setGeneroFiltro] = useState('')
+  const [paisFiltro, setPaisFiltro] = useState('')
   const [mostrarEstatisticas, setMostrarEstatisticas] = useState(false)
   const [erro, setErro] = useState('')
+  const [livroSelecionado, setLivroSelecionado] = useState<Book | null>(null)
 
   useEffect(() => {
     carregarLivros()
@@ -31,7 +34,8 @@ export function EstantePublica() {
     }
   }
 
-  const nacionalidadesDisponiveis = Array.from(
+  const generosDisponiveis = Array.from(new Set(livros.map((l) => l.genre).filter(Boolean))).sort()
+  const paisesDisponiveis = Array.from(
     new Set(livros.map((l) => l.author_origin).filter(Boolean))
   ).sort()
 
@@ -42,11 +46,19 @@ export function EstantePublica() {
       livro.author.toLowerCase().includes(termo) ||
       livro.publisher?.toLowerCase().includes(termo)
 
-    const combinaNacionalidade =
-      !nacionalidadeFiltro || livro.author_origin === nacionalidadeFiltro
+    const combinaGenero = !generoFiltro || livro.genre === generoFiltro
+    const combinaPais = !paisFiltro || livro.author_origin === paisFiltro
 
-    return combinaTexto && combinaNacionalidade
+    return combinaTexto && combinaGenero && combinaPais
   })
+
+  function handleGeneroClickStats(genero: string) {
+    setGeneroFiltro(generoFiltro === genero ? '' : genero)
+  }
+
+  function handleOrigemClickStats(origem: string) {
+    setPaisFiltro(paisFiltro === origem ? '' : origem)
+  }
 
   return (
     <>
@@ -62,7 +74,14 @@ export function EstantePublica() {
         </button>
 
         {mostrarEstatisticas && (
-          <LibraryStats livros={livros} titulo="Biblioteca da comunidade StoryShelf" />
+          <LibraryStats
+            livros={livros}
+            titulo="Biblioteca da comunidade StoryShelf"
+            generoSelecionado={generoFiltro}
+            origemSelecionada={paisFiltro}
+            onGeneroClick={handleGeneroClickStats}
+            onOrigemClick={handleOrigemClickStats}
+          />
         )}
 
         <input
@@ -73,18 +92,33 @@ export function EstantePublica() {
           className="busca-input"
         />
 
-        <select
-          className="filtro-nacionalidade"
-          value={nacionalidadeFiltro}
-          onChange={(e) => setNacionalidadeFiltro(e.target.value)}
-        >
-          <option value="">Todas as nacionalidades</option>
-          {nacionalidadesDisponiveis.map((nacionalidade) => (
-            <option key={nacionalidade} value={nacionalidade}>
-              {nacionalidade}
-            </option>
-          ))}
-        </select>
+        <div className="filtros-lista">
+          <select value={generoFiltro} onChange={(e) => setGeneroFiltro(e.target.value)}>
+            <option value="">Todos os gêneros</option>
+            {generosDisponiveis.map((g) => (
+              <option key={g} value={g}>{g}</option>
+            ))}
+          </select>
+
+          <select value={paisFiltro} onChange={(e) => setPaisFiltro(e.target.value)}>
+            <option value="">Todas as nacionalidades</option>
+            {paisesDisponiveis.map((p) => (
+              <option key={p} value={p}>{p}</option>
+            ))}
+          </select>
+
+          {(generoFiltro || paisFiltro) && (
+            <button
+              className="botao-limpar-filtro"
+              onClick={() => {
+                setGeneroFiltro('')
+                setPaisFiltro('')
+              }}
+            >
+              ✕ Limpar filtros
+            </button>
+          )}
+        </div>
 
         {erro && <p className="erro">{erro}</p>}
 
@@ -94,7 +128,12 @@ export function EstantePublica() {
 
         <div className="lista-livros">
           {livrosFiltrados.map((livro) => (
-            <div key={livro.id} className="livro-card" data-testid={`livro-publico-${livro.isbn}`}>
+            <div
+              key={livro.id}
+              className="livro-card livro-card-clicavel"
+              data-testid={`livro-publico-${livro.isbn}`}
+              onClick={() => setLivroSelecionado(livro)}
+            >
               <BookCover title={livro.title} coverUrl={livro.cover_url} />
               <div>
                 <h3>{livro.title}</h3>
@@ -106,11 +145,16 @@ export function EstantePublica() {
                   </span>
                   {livro.author_origin}
                 </p>
+                <p className="genero-tag">{livro.genre}</p>
               </div>
             </div>
           ))}
         </div>
       </div>
+
+      {livroSelecionado && (
+        <BookDetailModal livro={livroSelecionado} onFechar={() => setLivroSelecionado(null)} />
+      )}
     </>
   )
 }

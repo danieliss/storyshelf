@@ -1,5 +1,11 @@
 import { normalizarGenero } from '../utils/genre'
 
+type MetadadosComplementares = {
+  genre: string | null
+  synopsis: string | null
+  format: string | null
+}
+
 export async function buscarLivroPorIsbn(isbnDigitado: string) {
   const isbn = isbnDigitado.replace(/\D/g, '')
 
@@ -10,26 +16,40 @@ export async function buscarLivroPorIsbn(isbnDigitado: string) {
 
   if (!resultado) return null
 
-  if (!resultado.genre) {
-    resultado.genre = await buscarGeneroComplementar(isbn)
+  if (!resultado.genre || !resultado.synopsis || !resultado.format) {
+    const complementar = await buscarMetadadosComplementares(isbn)
+    resultado.genre = resultado.genre ?? complementar.genre
+    resultado.synopsis = resultado.synopsis ?? complementar.synopsis
+    resultado.format = resultado.format ?? complementar.format
   }
+
   resultado.genre = normalizarGenero(resultado.genre)
+  resultado.synopsis = resultado.synopsis ?? 'Sinopse não disponível.'
+  resultado.format = resultado.format ?? 'Físico'
+
   return resultado
-  
 }
 
-async function buscarGeneroComplementar(isbn: string): Promise<string | null> {
+async function buscarMetadadosComplementares(isbn: string): Promise<MetadadosComplementares> {
   const apiKey = import.meta.env.VITE_GOOGLE_BOOKS_API_KEY
 
   const response = await fetch(
     `https://www.googleapis.com/books/v1/volumes?q=isbn:${isbn}&key=${apiKey}`
   )
-  if (!response.ok) return null
+  if (!response.ok) return { genre: null, synopsis: null, format: null }
 
   const data = await response.json()
-  if (!data.items || data.items.length === 0) return null
+  if (!data.items || data.items.length === 0) return { genre: null, synopsis: null, format: null }
 
-  return data.items[0].volumeInfo.categories?.[0] ?? null
+  const item = data.items[0]
+  const info = item.volumeInfo
+  const isEbook = item.saleInfo?.isEbook === true
+
+  return {
+    genre: info.categories?.[0] ?? null,
+    synopsis: info.description ?? null,
+    format: isEbook ? 'Digital' : null,
+  }
 }
 
 async function buscarPorBrasilApi(isbn: string) {
@@ -45,6 +65,8 @@ async function buscarPorBrasilApi(isbn: string) {
     publisher: livro.publisher ?? 'Editora desconhecida',
     cover_url: capa,
     genre: null as string | null,
+    synopsis: null as string | null,
+    format: null as string | null,
   }
 }
 
@@ -59,7 +81,9 @@ async function buscarPorGoogleBooksIsbn(isbn: string) {
   const data = await response.json()
   if (!data.items || data.items.length === 0) return null
 
-  const info = data.items[0].volumeInfo
+  const item = data.items[0]
+  const info = item.volumeInfo
+  const isEbook = item.saleInfo?.isEbook === true
 
   return {
     title: info.title ?? 'Título não encontrado',
@@ -67,6 +91,8 @@ async function buscarPorGoogleBooksIsbn(isbn: string) {
     publisher: info.publisher ?? 'Editora desconhecida',
     cover_url: info.imageLinks?.thumbnail ?? `https://covers.openlibrary.org/b/isbn/${isbn}-M.jpg`,
     genre: info.categories?.[0] ?? null,
+    synopsis: info.description ?? null,
+    format: isEbook ? 'Digital' : null,
   }
 }
 
@@ -80,12 +106,19 @@ async function buscarPorOpenLibrary(isbn: string) {
   const livro = data[`ISBN:${isbn}`]
   if (!livro) return null
 
+  const formatoBruto = (livro.physical_format ?? '').toLowerCase()
+  const formato = /kindle|ebook|digital/.test(formatoBruto) ? 'Digital' : null
+
+  const sinopseBruta = livro.notes ?? livro.excerpts?.[0]?.text ?? null
+
   return {
     title: livro.title ?? 'Título não encontrado',
     author: livro.authors?.[0]?.name ?? 'Autor desconhecido',
     publisher: livro.publishers?.[0]?.name ?? 'Editora desconhecida',
     cover_url: livro.cover?.medium ?? `https://covers.openlibrary.org/b/isbn/${isbn}-M.jpg`,
     genre: livro.subjects?.[0]?.name ?? null,
+    synopsis: typeof sinopseBruta === 'string' ? sinopseBruta : null,
+    format: formato,
   }
 }
 
@@ -96,6 +129,40 @@ export type ResultadoBusca = {
   publisher: string
   cover_url: string
   genre: string | null
+  synopsis: string | null
+  format: string | null
+}
+
+async function buscarPorEditoraGoogleBooks(termo: string): Promise<ResultadoBusca[]> {
+  const apiKey = import.meta.env.VITE_GOOGLE_BOOKS_API_KEY
+
+  const response = await fetch(
+    `https://www.googleapis.com/books/v1/volumes?q=inpublisher:${encodeURIComponent(termo)}&maxResults=10&key=${apiKey}`
+  )
+  if (!response.ok) return []
+
+  const data = await response.json()
+  if (!data.items) return []
+
+  return data.items
+    .map((item: any) => {
+      const info = item.volumeInfo
+      const isbn13 = info.industryIdentifiers?.find((id: any) => id.type === 'ISBN_13')
+      const isbn10 = info.industryIdentifiers?.find((id: any) => id.type === 'ISBN_10')
+      const isEbook = item.saleInfo?.isEbook === true
+
+      return {
+        isbn: isbn13?.identifier ?? isbn10?.identifier ?? '',
+        title: info.title ?? 'Título não encontrado',
+        author: info.authors?.[0] ?? 'Autor desconhecido',
+        publisher: info.publisher ?? 'Editora desconhecida',
+        cover_url: info.imageLinks?.thumbnail ?? '',
+        genre: normalizarGenero(info.categories?.[0] ?? null),
+        synopsis: info.description ?? 'Sinopse não disponível.',
+        format: isEbook ? 'Digital' : 'Físico',
+      }
+    })
+    .filter((livro: ResultadoBusca) => livro.isbn !== '')
 }
 
 export async function buscarLivrosPorTexto(termo: string): Promise<ResultadoBusca[]> {
@@ -110,23 +177,33 @@ export async function buscarLivrosPorTexto(termo: string): Promise<ResultadoBusc
   }
 
   const data = await response.json()
-  if (!data.items) return []
+  let resultados: ResultadoBusca[] = []
 
-  return data.items
-    .map((item: any) => {
-      const info = item.volumeInfo
-      const isbn13 = info.industryIdentifiers?.find((id: any) => id.type === 'ISBN_13')
-      const isbn10 = info.industryIdentifiers?.find((id: any) => id.type === 'ISBN_10')
-      
+  if (data.items) {
+    resultados = data.items
+      .map((item: any) => {
+        const info = item.volumeInfo
+        const isbn13 = info.industryIdentifiers?.find((id: any) => id.type === 'ISBN_13')
+        const isbn10 = info.industryIdentifiers?.find((id: any) => id.type === 'ISBN_10')
+        const isEbook = item.saleInfo?.isEbook === true
 
-      return {
-        isbn: isbn13?.identifier ?? isbn10?.identifier ?? '',
-        title: info.title ?? 'Título não encontrado',
-        author: info.authors?.[0] ?? 'Autor desconhecido',
-        publisher: info.publisher ?? 'Editora desconhecida',
-        cover_url: info.imageLinks?.thumbnail ?? '',
-        genre: normalizarGenero(info.categories?.[0] ?? null),
-      }
-    })
-    .filter((livro: ResultadoBusca) => livro.isbn !== '')
+        return {
+          isbn: isbn13?.identifier ?? isbn10?.identifier ?? '',
+          title: info.title ?? 'Título não encontrado',
+          author: info.authors?.[0] ?? 'Autor desconhecido',
+          publisher: info.publisher ?? 'Editora desconhecida',
+          cover_url: info.imageLinks?.thumbnail ?? '',
+          genre: normalizarGenero(info.categories?.[0] ?? null),
+          synopsis: info.description ?? 'Sinopse não disponível.',
+          format: isEbook ? 'Digital' : 'Físico',
+        }
+      })
+      .filter((livro: ResultadoBusca) => livro.isbn !== '')
+  }
+
+  if (resultados.length === 0) {
+    resultados = await buscarPorEditoraGoogleBooks(termo)
+  }
+
+  return resultados
 }

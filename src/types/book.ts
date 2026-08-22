@@ -9,6 +9,8 @@ export type Book = {
   genre: string
   publisher: string
   cover_url: string
-  created_at: string
+  synopsis: string
+  format: string
   purchase_url: string
+  created_at: string
 }

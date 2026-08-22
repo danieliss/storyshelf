@@ -137,3 +137,43 @@
   color: var(--color-text);
   background: var(--color-surface);
 }
+
+.flag-icon {
+  width: 20px;
+  height: 15px;
+  border-radius: 2px;
+  vertical-align: middle;
+}
+
+.filtros-lista {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.filtros-lista select {
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: var(--radius);
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+
+.botao-limpar-filtro {
+  padding: 8px 12px;
+  border: 1px solid var(--color-error);
+  background: transparent;
+  color: var(--color-error);
+  border-radius: var(--radius);
+  font-size: 13px;
+}
+
+.genero-tag {
+  display: inline-block;
+  font-size: 11px;
+  background: var(--color-background);
+  padding: 2px 8px;
+  border-radius: 10px;
+  margin-bottom: 6px;
+}

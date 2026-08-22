@@ -8,6 +8,7 @@ export function Login() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [erro, setErro] = useState('')
+  const [atualizandoTodos, setAtualizandoTodos] = useState(false)
   const navigate = useNavigate()
 
   async function handleLogin() {

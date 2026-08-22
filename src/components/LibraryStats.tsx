@@ -1,10 +1,14 @@
 import type { Book } from '../types/book'
-import { FlagIcon } from './FlagIcon.tsx'
+import { FlagIcon } from './FlagIcon'
 import './LibraryStats.css'
 
 type Props = {
   livros: Book[]
   titulo: string
+  generoSelecionado?: string
+  origemSelecionada?: string
+  onGeneroClick?: (genero: string) => void
+  onOrigemClick?: (origem: string) => void
 }
 
 function contarPor(livros: Book[], campo: 'genre' | 'author_origin') {
@@ -23,7 +27,14 @@ function codigoDoPais(livros: Book[], nomePais: string): string | null {
   return encontrado?.author_origin_code ?? null
 }
 
-export function LibraryStats({ livros, titulo }: Props) {
+export function LibraryStats({
+  livros,
+  titulo,
+  generoSelecionado,
+  origemSelecionada,
+  onGeneroClick,
+  onOrigemClick,
+}: Props) {
   const total = livros.length
   const porGenero = contarPor(livros, 'genre')
   const porOrigem = contarPor(livros, 'author_origin')
@@ -41,11 +52,17 @@ export function LibraryStats({ livros, titulo }: Props) {
     <div className="stats-container">
       <h2>{titulo}</h2>
       <p className="stats-total">{total} {total === 1 ? 'livro' : 'livros'} no total</p>
+      <p className="stats-dica">Clique em uma barra para filtrar a lista abaixo</p>
 
       <div className="stats-secao">
         <h3>Por gênero</h3>
         {porGenero.map(([genero, quantidade]) => (
-          <div className="stats-linha" key={genero}>
+          <button
+            key={genero}
+            className={`stats-linha ${generoSelecionado === genero ? 'stats-selecionada' : ''}`}
+            onClick={() => onGeneroClick?.(genero)}
+            type="button"
+          >
             <span className="stats-label">{genero}</span>
             <div className="stats-barra-fundo">
               <div
@@ -54,14 +71,19 @@ export function LibraryStats({ livros, titulo }: Props) {
               />
             </div>
             <span className="stats-quantidade">{quantidade}</span>
-          </div>
+          </button>
         ))}
       </div>
 
       <div className="stats-secao">
         <h3>Por origem do autor</h3>
         {porOrigem.map(([origem, quantidade]) => (
-          <div className="stats-linha" key={origem}>
+          <button
+            key={origem}
+            className={`stats-linha ${origemSelecionada === origem ? 'stats-selecionada' : ''}`}
+            onClick={() => onOrigemClick?.(origem)}
+            type="button"
+          >
             <span className="stats-label">
               {origem !== 'Origem desconhecida' && (
                 <span className="stats-bandeira">
@@ -77,7 +99,7 @@ export function LibraryStats({ livros, titulo }: Props) {
               />
             </div>
             <span className="stats-quantidade">{quantidade}</span>
-          </div>
+          </button>
         ))}
       </div>
     </div>

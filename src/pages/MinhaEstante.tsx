@@ -10,7 +10,8 @@ import { BookCover } from '../components/BookCover'
 import { AppHeader } from '../components/AppHeader'
 import { BarcodeScanner } from '../components/BarcodeScanner'
 import { LibraryStats } from '../components/LibraryStats'
-import { pareceAsin, linkProdutoAmazon } from '../utils/amazon'
+import { BookDetailModal } from '../components/BookDetailModal'
+import { pareceAsin, linkProdutoAmazon, confirmarEAbrirAmazon } from '../utils/amazon'
 import './MinhaEstante.css'
 
 export function MinhaEstante() {
@@ -24,6 +25,13 @@ export function MinhaEstante() {
   const [mostrarEstatisticas, setMostrarEstatisticas] = useState(false)
   const [carregando, setCarregando] = useState(false)
   const [erro, setErro] = useState('')
+  const [atualizandoTodos, setAtualizandoTodos] = useState(false)
+
+  const [generoFiltro, setGeneroFiltro] = useState('')
+  const [paisFiltro, setPaisFiltro] = useState('')
+
+  const [livroSelecionado, setLivroSelecionado] = useState<Book | null>(null)
+  const [atualizandoModal, setAtualizandoModal] = useState(false)
 
   useEffect(() => {
     carregarLivros()
@@ -53,6 +61,8 @@ export function MinhaEstante() {
     publisher: string
     cover_url: string
     genre: string | null
+    synopsis: string | null
+    format: string | null
   }) {
     const { data: userData } = await supabase.auth.getUser()
     const userId = userData.user?.id
@@ -83,8 +93,8 @@ export function MinhaEstante() {
 
   async function handleAdicionarPorIsbn() {
     if (pareceAsin(isbn)) {
-      setErro('Isso parece ser um ASIN da Amazon (e-book exclusivo). Abrimos a página do produto em outra aba — você pode cadastrar esse livro manualmente em breve.')
-      window.open(linkProdutoAmazon(isbn), '_blank')
+      setErro('Isso parece ser um ASIN da Amazon (e-book exclusivo). Confirme abaixo se quer ver na Amazon, ou cadastre manualmente.')
+      confirmarEAbrirAmazon(linkProdutoAmazon(isbn))
       return
     }
 
@@ -155,6 +165,7 @@ export function MinhaEstante() {
 
     if (!error) {
       carregarLivros()
+      setLivroSelecionado(null)
     }
   }
 
@@ -169,16 +180,81 @@ export function MinhaEstante() {
 
   async function handleAtualizarMetadados(livro: Book) {
     const resultado = await buscarLivroPorIsbn(livro.isbn)
-    if (!resultado) return
+    const origemAutor = await buscarOrigemAutor(livro.author)
 
-    const { error } = await supabase
-      .from('books')
-      .update({ genre: resultado.genre ?? 'Não classificado' })
-      .eq('id', livro.id)
+    const atualizacao: Record<string, string | null> = {}
+
+    if (resultado?.genre && (!livro.genre || livro.genre === 'Não classificado')) {
+      atualizacao.genre = resultado.genre
+    }
+    if (resultado?.synopsis && (!livro.synopsis || livro.synopsis === 'Sinopse não disponível.')) {
+      atualizacao.synopsis = resultado.synopsis
+    }
+    if (resultado?.format && !livro.format) {
+      atualizacao.format = resultado.format
+    }
+    if (origemAutor.pais && (!livro.author_origin || livro.author_origin === 'Origem desconhecida')) {
+      atualizacao.author_origin = origemAutor.pais
+      atualizacao.author_origin_code = origemAutor.codigoPais
+    }
+
+    if (Object.keys(atualizacao).length === 0) return
+
+    const { error } = await supabase.from('books').update(atualizacao).eq('id', livro.id)
 
     if (!error) {
-      carregarLivros()
+      await carregarLivros()
     }
+  }
+
+  async function handleAtualizarModal(livro: Book) {
+    setAtualizandoModal(true)
+    await handleAtualizarMetadados(livro)
+
+    const { data } = await supabase.from('books').select('*').eq('id', livro.id).single()
+    if (data) setLivroSelecionado(data as Book)
+
+    setAtualizandoModal(false)
+  }
+
+  async function handleAtualizarTodosPendentes() {
+    const pendentes = livros.filter(
+      (l) =>
+        !l.genre ||
+        l.genre === 'Não classificado' ||
+        !l.author_origin ||
+        l.author_origin === 'Origem desconhecida'
+    )
+    if (pendentes.length === 0) return
+
+    setAtualizandoTodos(true)
+
+    for (const livro of pendentes) {
+      await handleAtualizarMetadados(livro)
+      await new Promise((resolve) => setTimeout(resolve, 400))
+    }
+
+    await carregarLivros()
+    setAtualizandoTodos(false)
+  }
+
+  const generosDisponiveis = Array.from(new Set(livros.map((l) => l.genre).filter(Boolean))).sort()
+  const paisesDisponiveis = Array.from(
+    new Set(livros.map((l) => l.author_origin).filter(Boolean))
+  ).sort()
+
+  const livrosExibidos = livros.filter((livro) => {
+    const combinaGenero = !generoFiltro || livro.genre === generoFiltro
+    const combinaPais = !paisFiltro || livro.author_origin === paisFiltro
+    return combinaGenero && combinaPais
+  })
+
+  function handleGeneroClickStats(genero: string) {
+    setGeneroFiltro(generoFiltro === genero ? '' : genero)
+  }
+
+  function handleOrigemClickStats(origem: string) {
+    setPaisFiltro(paisFiltro === origem ? '' : origem)
   }
 
   return (
@@ -194,9 +270,60 @@ export function MinhaEstante() {
           {mostrarEstatisticas ? 'Ocultar estatísticas' : '📊 Ver estatísticas da minha biblioteca'}
         </button>
 
-        {mostrarEstatisticas && (
-          <LibraryStats livros={livros} titulo="Minha biblioteca pessoal" />
+        {livros.some(
+          (l) =>
+            !l.genre ||
+            l.genre === 'Não classificado' ||
+            !l.author_origin ||
+            l.author_origin === 'Origem desconhecida'
+        ) && (
+          <button
+            className="botao-atualizar-lote"
+            onClick={handleAtualizarTodosPendentes}
+            disabled={atualizandoTodos}
+          >
+            {atualizandoTodos ? 'Atualizando dados...' : '🔄 Atualizar gênero e origem pendentes'}
+          </button>
         )}
+
+        {mostrarEstatisticas && (
+          <LibraryStats
+            livros={livros}
+            titulo="Minha biblioteca pessoal"
+            generoSelecionado={generoFiltro}
+            origemSelecionada={paisFiltro}
+            onGeneroClick={handleGeneroClickStats}
+            onOrigemClick={handleOrigemClickStats}
+          />
+        )}
+
+        <div className="filtros-lista">
+          <select value={generoFiltro} onChange={(e) => setGeneroFiltro(e.target.value)}>
+            <option value="">Todos os gêneros</option>
+            {generosDisponiveis.map((g) => (
+              <option key={g} value={g}>{g}</option>
+            ))}
+          </select>
+
+          <select value={paisFiltro} onChange={(e) => setPaisFiltro(e.target.value)}>
+            <option value="">Todos os países</option>
+            {paisesDisponiveis.map((p) => (
+              <option key={p} value={p}>{p}</option>
+            ))}
+          </select>
+
+          {(generoFiltro || paisFiltro) && (
+            <button
+              className="botao-limpar-filtro"
+              onClick={() => {
+                setGeneroFiltro('')
+                setPaisFiltro('')
+              }}
+            >
+              ✕ Limpar filtros
+            </button>
+          )}
+        </div>
 
         <div className="modo-busca">
           <button
@@ -264,9 +391,18 @@ export function MinhaEstante() {
           </div>
         )}
 
+        {livrosExibidos.length === 0 && livros.length > 0 && (
+          <p className="vazio">Nenhum livro corresponde aos filtros selecionados.</p>
+        )}
+
         <div className="lista-livros">
-          {livros.map((livro) => (
-            <div key={livro.id} className="livro-card" data-testid={`livro-${livro.isbn}`}>
+          {livrosExibidos.map((livro) => (
+            <div
+              key={livro.id}
+              className="livro-card livro-card-clicavel"
+              data-testid={`livro-${livro.isbn}`}
+              onClick={() => setLivroSelecionado(livro)}
+            >
               <BookCover
                 title={livro.title}
                 coverUrl={livro.cover_url}
@@ -283,25 +419,15 @@ export function MinhaEstante() {
                   </span>
                   {livro.author_origin}
                 </p>
-                {livro.purchase_url && (
-                  
-                    <a href={livro.purchase_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="link-comprar"
-                  >
-                    🛒 Ver na loja
-                  </a>
-                )}
-                {(!livro.genre || livro.genre === 'Não classificado') && (
-                  <button
-                    onClick={() => handleAtualizarMetadados(livro)}
-                    className="botao-atualizar"
-                  >
-                    🔄 Buscar gênero
-                  </button>
-                )}
-                <button onClick={() => handleRemoverLivro(livro.id)}>Remover</button>
+                <p className="genero-tag">{livro.genre}</p>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    handleRemoverLivro(livro.id)
+                  }}
+                >
+                  Remover
+                </button>
               </div>
             </div>
           ))}
@@ -315,6 +441,16 @@ export function MinhaEstante() {
             setMostrarScanner(false)
           }}
           onFechar={() => setMostrarScanner(false)}
+        />
+      )}
+
+      {livroSelecionado && (
+        <BookDetailModal
+          livro={livroSelecionado}
+          onFechar={() => setLivroSelecionado(null)}
+          onAtualizar={() => handleAtualizarModal(livroSelecionado)}
+          atualizando={atualizandoModal}
+          editavel
         />
       )}
     </>
